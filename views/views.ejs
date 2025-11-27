@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Students</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <h2 class="logo">LittleStar</h2>
+      <ul>
+        <li><a href="/">Dashboard</a></li>
+        <li><a class="active" href="/views">Students</a></li>
+        <li><a href="/scores">Scores</a></li>
+        <li><a href="/reports">Reports</a></li>
+      </ul>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+      
+      <!-- HEADER -->
+      <header class="header">
+        <h1>Students</h1>
+      </header>
+
+      <!-- CONTENT -->
+      <section class="content">
+
+       <div class="section-header">
+        <h2 class="section-title">Student List</h2> 
+      </div>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search students..." />
+        <a href="/add-student" class="btn-add">+ Add Student</a>
+      </div>
+      
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Age</th>
+              <th>Class</th>
+              <th>Contact Name</th>
+              <th>Contact Number</th>
+              <th>Student Status</th>
+              <th>actions</th>
+            </tr>
+          </thead>
+
+          <tbody id="tableBody">
+            <% if (students.length === 0) { %>
+              <tr>
+                <td colspan="6" style="text-align:center;">No students yet</td>
+              </tr>
+            <% } else { %>
+              <% students.forEach((student, index) => { %>
+                <tr>
+                  <td><%= index + 1 %></td>
+                  <td><%= student.name %></td>
+                  <td><%= student.age %></td>
+                  <td><%= student.class %></td>
+                  <td><%= student.contactName || '-' %></td>
+                  <td><%= student.contactNumber || '-' %></td>
+                  <td><%= student.status %></td>
+                  <td>
+                  <div class="dropdown">
+                    <button class="burger-btn">☰</button>
+                    <div class="dropdown-content">
+                      <a href="/add-score/<%= student.id %>">Add Score</a>
+                      <form action="/delete-student/<%= student.id %>" method="POST" style="margin:0;">
+                        <button type="submit" class="delete-btn">Delete</button>
+                      </form>
+                    </div>
+                  </div>
+                </td>
+                </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+
+        </table>
+         <div class="pagination" id="pagination"></div>
+
+      </section>
+
+    </div>
+  </div>
+<script>
+  document.querySelectorAll('.burger-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const dropdown = btn.nextElementSibling;
+      dropdown.classList.toggle('show');
+      
+      const rect = dropdown.getBoundingClientRect();
+      if (rect.bottom > window.innerHeight) {
+        dropdown.style.top = `-${dropdown.offsetHeight}px`; 
+      } else {
+        dropdown.style.top = '100%'; 
+      }
+    });
+  });
+  // -----------------------------
+  // SEARCH + PAGINATION
+  // -----------------------------
+const searchInput = document.getElementById("searchInput");
+const tableBody = document.getElementById("tableBody");
+let timeout = null;
+
+async function fetchStudents(query = "") {
+  try {
+    const res = await fetch(`/search-students?q=${encodeURIComponent(query)}`);
+    const students = await res.json();
+
+    // Clear existing rows
+    tableBody.innerHTML = "";
+
+    if (students.length === 0) {
+      const row = document.createElement("tr");
+      row.innerHTML = `<td colspan="8" style="text-align:center;">No students yet</td>`;
+      tableBody.appendChild(row);
+      return;
+    }
+
+    // Add rows for each student
+    students.forEach((student, index) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${student.name}</td>
+        <td>${student.age}</td>
+        <td>${student.class}</td>
+        <td>${student.contactName || '-'}</td>
+        <td>${student.contactNumber || '-'}</td>
+        <td>${student.status || '-'}</td>
+        <td>
+          <div class="dropdown">
+            <button class="burger-btn">☰</button>
+            <div class="dropdown-content">
+              <a href="/add-score/${student.id}">Add Score</a>
+              <form action="/delete-student/${student.id}" method="POST" style="margin:0;">
+                <button type="submit" class="delete-btn">Delete</button>
+              </form>
+            </div>
+          </div>
+        </td>
+      `;
+      tableBody.appendChild(row);
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+searchInput.addEventListener("input", () => {
+  clearTimeout(timeout);
+  timeout = setTimeout(() => fetchStudents(searchInput.value), 300);
+});
+
+// Initial load: show all students
+fetchStudents();
+</script>
+</body>
+</html>
