@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <title>Students</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light.css" />
+  <script src="https://unpkg.com/@popperjs/core@2"></script>
+  <script src="https://unpkg.com/tippy.js@6"></script>
 </head>
 <body>
 
@@ -13,10 +16,11 @@
     <nav class="sidebar">
       <h2 class="logo">LittleStar</h2>
       <ul>
-        <li><a href="/">Dashboard</a></li>
+        <li><a href="/home">Dashboard</a></li>
         <li><a class="active" href="/views">Students</a></li>
         <li><a href="/scores">Scores</a></li>
         <li><a href="/reports">Reports</a></li>
+        <li><a href="/manage-roles">Settings</a></li>
       </ul>
     </nav>
 
@@ -49,41 +53,11 @@
               <th>Contact Name</th>
               <th>Contact Number</th>
               <th>Student Status</th>
-              <th>actions</th>
+              <th>Actions</th>
             </tr>
           </thead>
-
           <tbody id="tableBody">
-            <% if (students.length === 0) { %>
-              <tr>
-                <td colspan="6" style="text-align:center;">No students yet</td>
-              </tr>
-            <% } else { %>
-              <% students.forEach((student, index) => { %>
-                <tr>
-                  <td><%= index + 1 %></td>
-                  <td><%= student.name %></td>
-                  <td><%= student.age %></td>
-                  <td><%= student.class %></td>
-                  <td><%= student.contactName || '-' %></td>
-                  <td><%= student.contactNumber || '-' %></td>
-                  <td><%= student.status %></td>
-                  <td>
-                  <div class="dropdown">
-                    <button class="burger-btn">☰</button>
-                    <div class="dropdown-content">
-                      <a href="/add-score/<%= student.id %>">Add Score</a>
-                      <form action="/delete-student/<%= student.id %>" method="POST" style="margin:0;">
-                        <button type="submit" class="delete-btn">Delete</button>
-                      </form>
-                    </div>
-                  </div>
-                </td>
-                </tr>
-              <% }) %>
-            <% } %>
           </tbody>
-
         </table>
          <div class="pagination" id="pagination"></div>
 
@@ -92,77 +66,107 @@
     </div>
   </div>
 <script>
-  document.querySelectorAll('.burger-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const dropdown = btn.nextElementSibling;
-      dropdown.classList.toggle('show');
-      
-      const rect = dropdown.getBoundingClientRect();
-      if (rect.bottom > window.innerHeight) {
-        dropdown.style.top = `-${dropdown.offsetHeight}px`; 
-      } else {
-        dropdown.style.top = '100%'; 
-      }
-    });
-  });
-  // -----------------------------
-  // SEARCH + PAGINATION
-  // -----------------------------
 const searchInput = document.getElementById("searchInput");
 const tableBody = document.getElementById("tableBody");
 let timeout = null;
 
-async function fetchStudents(query = "") {
+async function fetchStudents(query) {
   try {
     const res = await fetch(`/search-students?q=${encodeURIComponent(query)}`);
-    const students = await res.json();
-
-    // Clear existing rows
-    tableBody.innerHTML = "";
-
-    if (students.length === 0) {
-      const row = document.createElement("tr");
-      row.innerHTML = `<td colspan="8" style="text-align:center;">No students yet</td>`;
-      tableBody.appendChild(row);
-      return;
-    }
-
-    // Add rows for each student
-    students.forEach((student, index) => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${index + 1}</td>
-        <td>${student.name}</td>
-        <td>${student.age}</td>
-        <td>${student.class}</td>
-        <td>${student.contactName || '-'}</td>
-        <td>${student.contactNumber || '-'}</td>
-        <td>${student.status || '-'}</td>
-        <td>
-          <div class="dropdown">
-            <button class="burger-btn">☰</button>
-            <div class="dropdown-content">
-              <a href="/add-score/${student.id}">Add Score</a>
-              <form action="/delete-student/${student.id}" method="POST" style="margin:0;">
-                <button type="submit" class="delete-btn">Delete</button>
-              </form>
-            </div>
-          </div>
-        </td>
-      `;
-      tableBody.appendChild(row);
-    });
+    const html = await res.text();
+    tableBody.innerHTML = html;
+    initStatusTippy(); // Replace rows cleanly
   } catch (err) {
     console.error(err);
   }
 }
+
 searchInput.addEventListener("input", () => {
   clearTimeout(timeout);
-  timeout = setTimeout(() => fetchStudents(searchInput.value), 300);
+
+  timeout = setTimeout(() => {
+    const q = searchInput.value.trim();
+
+    if (q === "") {
+      window.location.reload(); // Reset table
+      return;
+    }
+   
+    fetchStudents(q);
+  }, 300);
 });
 
-// Initial load: show all students
-fetchStudents();
+fetchStudents(""); // Initial load  
 </script>
+<script>
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  
+  toast.classList.add("show");
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2000);
+}
+</script>
+<script>
+function initStatusTippy() {
+  document.querySelectorAll(".status-chip").forEach(chip => {
+    const id = chip.dataset.id;
+    const current = chip.dataset.status;
+
+    tippy(chip, {
+      content: `
+        <div class="status-options">
+          <div class="status-option" data-value="Active">Active</div>
+          <div class="status-option" data-value="Inactive">Inactive</div>
+          <div class="status-option" data-value="Graduated">Graduated</div>
+        </div>
+      `,
+      allowHTML: true,
+      interactive: true,
+      trigger: "click",
+      theme: "light",
+      placement: "bottom",
+
+      onShown(instance) {
+        // Avoid duplicate event bindings every time Tippy opens
+        const options = instance.popper.querySelectorAll(".status-option");
+        options.forEach(opt => {
+            if (opt.dataset.value === current) {
+               opt.classList.add("active");
+              }
+          opt.onclick = async () => {
+            const newStatus = opt.dataset.value;
+
+            try {
+              await fetch(`/update-status/${id}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: newStatus })
+              });
+
+              // Update UI chip
+              chip.textContent = newStatus;
+              chip.className = "status-chip " + newStatus.toLowerCase();
+              chip.dataset.status = newStatus;
+              
+              showToast("Status updated!");
+
+              instance.hide();
+            } catch (err) {
+              console.error("Status update failed:", err);
+            }
+          };
+        });
+      }
+    });
+  });
+}
+</script>
+<script> 
+  document.addEventListener("DOMContentLoaded", initStatusTippy);
+</script>
+<div id="toast" class="toast">Status updated!</div>
 </body>
 </html>

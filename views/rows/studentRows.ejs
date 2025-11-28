@@ -1,0 +1,37 @@
+<% if (students.length === 0) { %>
+<tr>
+  <td colspan="8" style="text-align:center;">No students yet</td>
+</tr>
+<% } else { %>
+  <% students.forEach((student, index) => { %>
+<tr>
+  <td><%= index + 1 %></td>
+  <td><%= student.name %></td>
+  <td><%= student.age %></td>
+  <td><%= student.class %></td>
+  <td><%= student.contactName || '-' %></td>
+  <td><%= student.contactNumber || '-' %></td>
+  <td>
+  <span 
+    class="status-chip <%= (student.status || 'Active').toLowerCase() %>" 
+    data-id="<%= student.id %>"
+    data-status="<%= student.status %>"
+  >
+    <%= student.status || 'Active' %>
+  </span>
+  </td>
+  <td>
+    <div class="dropdown">
+      <button class="burger-btn">☰</button>
+      <div class="dropdown-content">
+        <a href="/edit-student/<%= student.id %>">Edit</a>
+        <a href="/add-score/<%= student.id %>">Add Score</a>
+        <form action="/delete-student/<%= student.id %>" method="POST" style="margin:0;">
+          <button type="submit" class="delete-btn">Delete</button>
+        </form>
+      </div>
+    </div>
+  </td>
+</tr>
+  <% }) %>
+<% } %>

@@ -132,31 +132,71 @@
   margin-bottom: 20px;
 }
 
-.form-box {
-  max-width: 500px;
+/* Wrap + Center */
+.edit-wrapper {
+  max-width: 600px;         /* controls width */
+  margin: 40px auto;        /* centers the form */
+  padding: 30px;
   background: #fff;
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.08);
 }
 
+/* Title */
+.edit-title {
+  margin-bottom: 25px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+  color: #222;
+}
+
+/* Form Groups */
 .form-group {
-  margin-bottom: 15px;
-  display: flex;
-  flex-direction: column;
+  margin-bottom: 18px;
 }
 
 .form-group label {
+  display: block;
   margin-bottom: 6px;
   font-weight: 600;
+  color: #333;
 }
 
+/* Inputs */
 .form-group input {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 16px;
+  border: 1px solid #d3d3d3;
+  border-radius: 8px;
+  transition: border-color .2s ease;
+}
+
+.form-group input:focus {
+  border-color: #4b73ff;
   outline: none;
 }
+
+/* Save Button */
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: #4b73ff;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background .2s ease;
+}
+
+.btn-primary:hover {
+  background: #3b5fe0;
+}
+
 
 #searchInput {
   flex: 1;
@@ -186,6 +226,7 @@
 .dropdown {
   position: relative;
   display: inline-block;
+  overflow: visible;
 }
 
 /* Burger button */
@@ -207,6 +248,7 @@
   box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
   z-index: 1000;
   border-radius: 4px;
+  overflow: visible;
 }
 
 /* Show dropdown on hover */
@@ -305,4 +347,96 @@
   margin-top: 10px;
   color: #ff6b6b;
   font-size: 0.9rem;
+}
+
+.status-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.status-chip {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-block;
+  text-transform: capitalize;
+}
+
+/* Status Chip Styles */
+.status-chip {
+  padding: 4px 10px;
+  border-radius: 12px;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.status-chip.active      { background: #4CAF50; }
+.status-chip.inactive    { background: #777; }
+.status-chip.graduated   { background: #2196F3; }
+.status-chip.pending     { background: #FFC107; }
+
+/* Container inside the Tippy */
+.status-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+/* Each option row */
+.status-option {
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+/* Hover effect */
+.status-option:hover {
+  background: #f0f0f0;
+}
+
+/* Optional: active status highlight */
+.status-option.active {
+  font-weight: 600;
+  background: #e8f0ff;
+  color: #1e60e8;
+}
+
+/* Improve Tippy appearance */
+.tippy-box[data-theme~="light"] {
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  padding: 4px 0;
+}
+
+.tippy-box[data-theme~="light"] .tippy-arrow {
+  color: white;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  background: #333;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
 }

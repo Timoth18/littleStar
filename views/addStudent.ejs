@@ -13,10 +13,11 @@
     <nav class="sidebar">
       <h2 class="logo">LittleStar</h2>
       <ul>
-        <li><a href="/">Dashboard</a></li>
+        <li><a href="/home">Dashboard</a></li>
         <li><a class="active" href="/views">Students</a></li>
         <li><a href="/scores">Scores</a></li>
         <li><a href="/reports">Reports</a></li>
+        <li><a href="/manage-roles">Settings</a></li>
       </ul>
     </nav>
 
@@ -31,6 +32,7 @@
       <!-- CONTENT -->
       <section class="content">
 
+        <div class = "edit-wrapper">
         <form action="/submit" method="POST" class="form-box">
 
           <div class="form-group">
@@ -55,12 +57,12 @@
 
           <div class="form-group">
             <label>Contact Number</label>
-           <input type="text" name="contact" inputmode="numeric" pattern="[0-9]*" placeholder="08xxxxxxxx">
+           <input type="text" name="contact" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="08xxxxxxxx">
           </div>
 
           <button actions="submit" type="submit" class="btn-primary">Add Student</button>
         </form>
-
+      </div>
       </section>
 
     </div>
