@@ -8,9 +8,15 @@
   <td><%= index + 1 %></td>
   <td><%= student.name %></td>
   <td><%= student.age %></td>
-  <td><%= student.class %></td>
-  <td><%= student.contactName || '-' %></td>
-  <td><%= student.contactNumber || '-' %></td>
+  <td>
+    <%= student.StudentClasses
+          .sort((a, b) => a.Classes.order_index - b.Classes.order_index)
+          .map(sc => sc.Classes.name)
+          .join(", ") 
+    %>
+  </td>
+  <td><%= student.contactname || '-' %></td>
+  <td><%= student.contactnumber || '-' %></td>
   <td>
   <span 
     class="status-chip <%= (student.status || 'Active').toLowerCase() %>" 

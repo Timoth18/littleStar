@@ -58,10 +58,16 @@ app.get("/home", requireAuth, async (req, res) => {
 })
 
 app.get("/views", requireAuth, async (req, res) => {
-  const { data: students, error } = await supabase
-    .from("Student")
-    .select("*")
-    .order("id", { ascending: false });
+const { data: students, error } = await supabase
+  .from('Student')
+  .select(`
+    id,
+    name,
+    age,  
+    StudentClasses (
+      Classes ( id, name, order_index )
+    )
+  `);
 
   if (error) {
     console.error("Supabase query error:", error);
@@ -72,45 +78,121 @@ app.get("/views", requireAuth, async (req, res) => {
 });
 
 app.get("/add-student",requireAuth, async (req, res) => {
-    res.render('addStudent');
+    const {data : classes, error} = await supabase
+      .from("Classes")
+      .select("*")
+      .order("name", {ascending: true});
+
+    if (error) {
+      console.error("Supabase query error:", error);
+      return res.send("Database error");
+    }
+
+    res.render('addStudent', {classes});
   })
 
 app.post("/submit", async (req, res) => {
-  const { name, age, class: className, parent_name, contact } = req.body;
+  const { name, age, parent_name, contact } = req.body;
 
-  const { data, error } = await supabase
-    .from("Student")
-    .insert([
-      {
-        name,
-        age: Number(age),
-        class: className,
-        contactName: parent_name,
-        contactNumber: Number(contact)
+  // Receive arrays from hidden inputs
+  const rawIds = req.body.class_id?.split(",") || [];
+  const rawLabels = req.body.class_label?.split(",") || [];
+
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  let finalClassIds = [];
+
+  for (let i = 0; i < rawIds.length; i++) {
+    const id = rawIds[i];
+    const label = rawLabels[i];
+
+    if (uuidRegex.test(id)) {
+      // Existing class
+      finalClassIds.push(id);
+    } else {
+      // NEW CLASS — create using label
+      const { data: newClass, error: classErr } = await supabase
+        .from("Classes")
+        .insert({ name: label }) // <-- clean version
+        .select()
+        .single();
+
+      if (classErr) {
+        console.error("Error creating class:", classErr);
+        return res.status(500).send("Failed to create new class");
       }
-    ]);
 
-  if (error) {
-    console.error("Error inserting student:", error);
+      finalClassIds.push(newClass.id);
+    }
+  }
+
+  // Insert student
+  const { data: student, error: studentErr } = await supabase
+    .from("Student")
+    .insert({
+      name,
+      age: Number(age),
+      contactname: parent_name,
+      contactnumber: Number(contact)
+    })
+    .select()
+    .single();
+
+  if (studentErr) {
+    console.error("Error inserting student:", studentErr);
     return res.status(500).send("Failed to add student");
   }
 
-  console.log("Inserted student:", data);
+  // Link student to all classes
+  const classLinks = finalClassIds.map(cid => ({
+    student_id: student.id,
+    class_id: cid
+  }));
+
+  const { error: linkErr } = await supabase
+    .from("StudentClasses")
+    .insert(classLinks);
+
+  if (linkErr) {
+    console.error("Error linking classes:", linkErr);
+    return res.status(500).send("Failed to link classes");
+  }
 
   res.redirect("/views");
 });
 
+
 app.get("/search-students", async (req, res) => {
-  const searchQuery = req.query.q || "";
+  const q = req.query.q || "";
 
   const { data: students, error } = await supabase
     .from("Student")
-    .select("*")
-    .or(`name.ilike.%${searchQuery}%,class.ilike.%${searchQuery}%`)
+    .select(`
+      id,
+      name,
+      age,
+      contactname,
+      contactnumber,
+      StudentClasses!inner (
+        Classes!inner (id, name, order_index)
+      )
+    `)
+    .or(`name.ilike.%${q}%`)
     .order("id", { ascending: false });
 
+  if (!error && q) {
+    const lower = q.toLowerCase();
+    students = students.filter(s =>
+      s.name.toLowerCase().includes(lower) ||
+      s.StudentClasses.some(sc =>
+        sc.Classes.name.toLowerCase().includes(lower)
+      )
+    );
+  }
+
   if (error) {
-    console.error(error);
+    console.error("Search error:", error);
     return res.status(500).json({ error: "Database error" });
   }
 
@@ -120,42 +202,81 @@ app.get("/search-students", async (req, res) => {
 app.get("/edit-student/:id", requireAuth, async (req, res) => {
   const studentId = req.params.id;
 
-  const { data: student, error } = await supabase
+  const { data: student, error: studentErr } = await supabase
     .from("Student")
-    .select("*")
+    .select(`
+      id,
+      name,
+      age,
+      contactname,
+      contactnumber,
+      status,
+      StudentClasses (
+        id,
+        class_id,
+        Classes ( id, name, order_index )
+      )
+    `)
     .eq("id", studentId)
     .single();
 
-  if (error || !student) {
-    console.error(error);
+  if (studentErr || !student) {
+    console.error("Failed to fetch student:", studentErr);
     return res.status(404).send("Student not found");
   }
 
-  res.render("editStudent", { student });
+  const { data: classes, error: classErr } = await supabase
+    .from("Classes")
+    .select("*")
+    .order("order_index", { ascending: true });
+
+  if (classErr) {
+    console.error("Failed to fetch classes:", classErr);
+    return res.status(500).send("Failed to load classes");
+  }
+
+  res.render("editStudent", { student, classes });
 });
+
 
 app.post("/edit-student/:id", requireAuth, async (req, res) => {
   const studentId = req.params.id;
-  const { name, age, class: className, parent_name, contact } = req.body;
+  const { name, age, parent_name, contact, class_id } = req.body;
 
-  const { error } = await supabase
+  // 1. Update student
+  const { error: studentErr } = await supabase
     .from("Student")
     .update({
       name,
       age: Number(age),
-      class: className,
-      contactName: parent_name,
-      contactNumber: Number(contact)
+      contactname: parent_name,
+      contactnumber: contact // TEXT, do not convert
     })
     .eq("id", studentId);
 
-  if (error) {
-    console.error(error);
+  if (studentErr) {
+    console.error(studentErr);
     return res.status(500).send("Failed to update student");
+  }
+
+  // 2. Update StudentClasses (delete then insert new)
+  await supabase
+    .from("StudentClasses")
+    .delete()
+    .eq("student_id", studentId);
+
+  if (class_id && class_id.trim() !== "") {
+    await supabase
+      .from("StudentClasses")
+      .insert({
+        student_id: studentId,
+        class_id: class_id // Already UUID
+      });
   }
 
   res.redirect("/views");
 });
+
 
 app.post("/update-status/:id", async (req, res) => {
   const { id } = req.params;

@@ -47,17 +47,46 @@
 
           <div class="form-group">
             <label>Class</label>
-            <input type="text" name="class">
+
+            <div class="custom-dropdown">
+              <input 
+                type="text"
+                id="classInput"
+                placeholder="Pilih kelas atau tambah baru..."
+                autocomplete="off"
+              >
+
+              <div class="dropdown-list" id="dropdownList">
+                <% classes.forEach(c => { %>
+                  <div class="dropdown-item existing-class" data-id="<%= c.id %>">
+                    <%= c.name %>
+                  </div>
+                <% }) %>
+
+                <!-- Add new class option -->
+                <div class="dropdown-item add-new" id="addNewClass" style="display:none;">
+                  + Add "<span id="addNewText"></span>"
+                </div>
+              </div>
+
+              <!-- MULTIPLE VALUES HERE -->
+              <input type="hidden" name="class_id" id="classHidden">
+              <input type="hidden" name="class_label" id="classLabelHidden">
+
+            </div>
+
+            <!-- Display selected classes here -->
+            <div id="selectedClasses" class="selected-classes"></div>
           </div>
 
           <div class="form-group">
             <label>Contact Name</label>
-            <input type="text" name="parent_name" placeholder="Nama Salah Satu Orang Tua">
+            <input type="text" name="parent_name" placeholder="Nama Salah Satu Orang Tua" required>
           </div>
 
           <div class="form-group">
             <label>Contact Number</label>
-           <input type="text" name="contact" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="08xxxxxxxx">
+           <input type="text" name="contact" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="08xxxxxxxx" required>
           </div>
 
           <button actions="submit" type="submit" class="btn-primary">Add Student</button>
@@ -67,6 +96,124 @@
 
     </div>
   </div>
+<script>
+  const classInput = document.getElementById("classInput");
+  const dropdownList = document.getElementById("dropdownList");
+  const addNewClass = document.getElementById("addNewClass");
+  const addNewText = document.getElementById("addNewText");
+  const classHidden = document.getElementById("classHidden");
+  const selectedClassesContainer = document.getElementById("selectedClasses");
+  const classLabelHidden = document.getElementById("classLabelHidden");
 
+  // Instead of ["id1","id2"], we store objects
+  let selectedClasses = [];
+
+  /* ---------------------------
+        OPEN / CLOSE DROPDOWN
+  ---------------------------- */
+
+  classInput.addEventListener("click", () => {
+    dropdownList.style.display = "block";
+  });
+
+  document.addEventListener("click", (e) => {
+    const wrapper = document.querySelector(".custom-dropdown");
+    if (!wrapper.contains(e.target)) {
+      dropdownList.style.display = "none";
+    }
+  });
+
+  /* ---------------------------
+          INPUT FILTERING
+  ---------------------------- */
+
+  classInput.addEventListener("input", () => {
+    const value = classInput.value.trim().toLowerCase();
+
+    if (value.length > 0) {
+      addNewText.textContent = classInput.value;
+      addNewClass.style.display = "block";
+    } else {
+      addNewClass.style.display = "none";
+    }
+  });
+
+  /* ---------------------------
+        SELECT EXISTING CLASS
+  ---------------------------- */
+
+  function bindExistingClassEvents() {
+    document.querySelectorAll(".existing-class").forEach(item => {
+      item.onclick = () => {
+        const id = item.dataset.id;
+        const label = item.textContent.trim();
+        addSelectedClass(id, label);
+        dropdownList.style.display = "none";
+      };
+    });
+  }
+
+  bindExistingClassEvents(); // initial bind
+
+  /* ---------------------------
+          ADD NEW CLASS
+  ---------------------------- */
+
+  addNewClass.addEventListener("click", () => {
+    const name = classInput.value.trim();
+    if (!name) return;
+
+    // Create unique temporary ID
+    const newId = "new:" + Date.now();
+
+    addSelectedClass(newId, name);
+    dropdownList.style.display = "none";
+  });
+
+  /* ---------------------------
+              HELPERS
+  ---------------------------- */
+
+  function addSelectedClass(id, label) {
+    // Prevent duplicates
+    if (selectedClasses.some(c => c.id === id)) return;
+
+    selectedClasses.push({ id, label });
+    updateHiddenInput();
+    renderSelectedClasses();
+
+    classInput.value = "";
+  }
+
+  function updateHiddenInput() {
+    classHidden.value = selectedClasses.map(c => c.id).join(",");
+    classLabelHidden.value = selectedClasses.map(c => c.label).join(",");
+  }
+
+
+  function renderSelectedClasses() {
+    selectedClassesContainer.innerHTML = "";
+
+    selectedClasses.forEach(c => {
+      const div = document.createElement("div");
+      div.className = "selected-class-tag";
+      div.innerHTML = `
+        ${c.label}
+        <span class="remove-tag" data-id="${c.id}">×</span>
+      `;
+      selectedClassesContainer.appendChild(div);
+    });
+
+    // Remove logic
+    document.querySelectorAll(".remove-tag").forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.id;
+        selectedClasses = selectedClasses.filter(c => c.id !== id);
+        updateHiddenInput();
+        renderSelectedClasses();
+      };
+    });
+  }
+</script>
 </body>
 </html>

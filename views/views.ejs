@@ -130,7 +130,6 @@ function initStatusTippy() {
       placement: "bottom",
 
       onShown(instance) {
-        // Avoid duplicate event bindings every time Tippy opens
         const options = instance.popper.querySelectorAll(".status-option");
         options.forEach(opt => {
             if (opt.dataset.value === current) {

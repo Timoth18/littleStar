@@ -9,7 +9,6 @@
 
   <div class="layout">
 
-    <!-- SIDEBAR -->
     <nav class="sidebar">
       <h2 class="logo">LittleStar</h2>
       <ul>
@@ -17,63 +16,211 @@
         <li><a class="active" href="/views">Students</a></li>
         <li><a href="/scores">Scores</a></li>
         <li><a href="/reports">Reports</a></li>
-        <li><a href="/settings">Settings</a></li>
+        <li><a href="/manage-roles">Settings</a></li>
       </ul>
     </nav>
 
-    <!-- MAIN -->
     <div class="main">
-
+      
       <header class="header">
         <h1>Edit Student</h1>
       </header>
 
       <section class="content">
+        <div class="edit-wrapper">
 
-       <div class="edit-wrapper">
-  <h1 class="edit-title">Edit Student</h1>
+        <form action="/update-student/<%= student.id %>" method="POST" class="form-box">
 
-  <form action="/edit-student/<%= student.id %>" method="POST" class="form">
-    
-        <div class="form-group">
-        <label>Name</label>
-        <input type="text" name="name" value="<%= student.name %>" required>
-        </div>
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" name="name" value="<%= student.name %>" required>
+          </div>
 
-        <div class="form-group">
-        <label>Age</label>
-        <input type="number" name="age" value="<%= student.age %>" required>
-        </div>
+          <div class="form-group">
+            <label>Age</label>
+            <input type="number" name="age" value="<%= student.age %>" required>
+          </div>
 
-        <div class="form-group">
-        <label>Class</label>
-        <input type="text" name="class" value="<%= student.class %>" required>
-        </div>
+          <!-- CLASS SELECTOR -->
+          <div class="form-group">
+            <label>Class</label>
 
-        <div class="form-group">
-        <label>Parent Name</label>
-        <input type="text" name="parent_name" value="<%= student.contactName %>" required>
-        </div>
+            <div class="custom-dropdown">
+              <input 
+                type="text"
+                id="classInput"
+                placeholder="Pilih kelas atau tambah baru..."
+                autocomplete="off"
+              >
 
-        <div class="form-group">
-        <label>Contact Number</label>
-        <input 
-            type="text" 
-            name="contact" 
-            value="<%= student.contactNumber %>"
-            inputmode="numeric"
-            oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-            required>
-        </div>
+              <div class="dropdown-list" id="dropdownList">
+                <% classes.forEach(c => { %>
+                  <div class="dropdown-item existing-class" data-id="<%= c.id %>">
+                    <%= c.name %>
+                  </div>
+                <% }) %>
 
-        <button type="submit" class="btn-primary">Save Changes</button>
+                <div class="dropdown-item add-new" id="addNewClass" style="display:none;">
+                  + Add "<span id="addNewText"></span>"
+                </div>
+              </div>
+
+              <!-- MULTIPLE VALUES -->
+              <input type="hidden" name="class_id" id="classHidden">
+              <input type="hidden" name="class_label" id="classLabelHidden">
+            </div>
+
+            <!-- SHOW SELECTED CLASSES -->
+            <div id="selectedClasses" class="selected-classes"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Contact Name</label>
+            <input type="text" name="parent_name" value="<%= student.contactname %>" required>
+          </div>
+
+          <div class="form-group">
+            <label>Contact Number</label>
+            <input 
+              type="text" 
+              name="contact" 
+              value="<%= student.contactnumber %>" 
+              inputmode="numeric"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+              required
+            >
+          </div>
+
+          <button type="submit" class="btn-primary">Update Student</button>
         </form>
+
         </div>
-
       </section>
-
     </div>
   </div>
 
+<script>
+  const classInput = document.getElementById("classInput");
+  const dropdownList = document.getElementById("dropdownList");
+  const addNewClass = document.getElementById("addNewClass");
+  const addNewText = document.getElementById("addNewText");
+  const classHidden = document.getElementById("classHidden");
+  const classLabelHidden = document.getElementById("classLabelHidden");
+  const selectedClassesContainer = document.getElementById("selectedClasses");
+
+  // -------------------------------------------------------
+  // LOAD EXISTING SELECTED CLASSES (safe JSON injection)
+  // -------------------------------------------------------
+let selectedClasses = <%- JSON.stringify(
+  (student.StudentClasses || []).map(function(sc) {
+    return {
+      id: sc && sc.Classes ? sc.Classes.id : "",
+      label: sc && sc.Classes ? sc.Classes.name : ""
+    };
+  })
+) %>
+
+  updateHiddenInput();
+  renderSelectedClasses();
+
+  // -------------------------------------------------------
+  // DROPDOWN BEHAVIOR
+  // -------------------------------------------------------
+  classInput.addEventListener("click", () => {
+    dropdownList.style.display = "block";
+  });
+
+  document.addEventListener("click", (e) => {
+    const wrapper = document.querySelector(".custom-dropdown");
+    if (!wrapper.contains(e.target)) {
+      dropdownList.style.display = "none";
+    }
+  });
+
+  classInput.addEventListener("input", () => {
+    const value = classInput.value.trim();
+    if (value.length > 0) {
+      addNewClass.style.display = "block";
+      addNewText.textContent = value;
+    } else {
+      addNewClass.style.display = "none";
+    }
+  });
+
+  // BIND EXISTING CLASS ITEMS
+  function bindExistingClassEvents() {
+    const items = document.querySelectorAll(".existing-class");
+    items.forEach(item => {
+      item.addEventListener("click", () => {
+        const id = item.dataset.id;
+        const label = item.textContent.trim();
+        addSelectedClass(id, label);
+        dropdownList.style.display = "none";
+      });
+    });
+  }
+
+  bindExistingClassEvents();
+
+  // ADD NEW CLASS TAG
+  addNewClass.addEventListener("click", () => {
+    const name = classInput.value.trim();
+    if (!name) return;
+
+    const newId = "new-" + Date.now();
+    addSelectedClass(newId, name);
+
+    dropdownList.style.display = "none";
+    classInput.value = "";
+  });
+
+  // -------------------------------------------------------
+  // CLASS SELECTION
+  // -------------------------------------------------------
+  function addSelectedClass(id, label) {
+    if (selectedClasses.some(c => c.id === id)) return;
+
+    selectedClasses.push({ id, label });
+    updateHiddenInput();
+    renderSelectedClasses();
+  }
+
+  // -------------------------------------------------------
+  // HIDDEN INPUT SYNC
+  // -------------------------------------------------------
+  function updateHiddenInput() {
+    classHidden.value = selectedClasses.map(c => c.id).join(",");
+    classLabelHidden.value = selectedClasses.map(c => c.label).join(",");
+  }
+
+  // -------------------------------------------------------
+  // RENDER SELECTED CLASS TAGS (no template literals)
+  // -------------------------------------------------------
+  function renderSelectedClasses() {
+    selectedClassesContainer.innerHTML = "";
+
+    selectedClasses.forEach(c => {
+      const tag = document.createElement("div");
+      tag.className = "selected-class-tag";
+
+      const text = document.createTextNode(c.label);
+      tag.appendChild(text);
+
+      const remove = document.createElement("span");
+      remove.className = "remove-tag";
+      remove.dataset.id = c.id;
+      remove.textContent = "×";
+
+      remove.addEventListener("click", () => {
+        selectedClasses = selectedClasses.filter(item => item.id !== c.id);
+        updateHiddenInput();
+        renderSelectedClasses();
+      });
+
+      tag.appendChild(remove);
+      selectedClassesContainer.appendChild(tag);
+    });
+  }
+</script>
 </body>
 </html>
