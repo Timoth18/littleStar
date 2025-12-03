@@ -62,7 +62,8 @@ app.get("/views", requireAuth, async (req, res) => {
     .select(`
       id,
       name,
-      age,  
+      age,
+      status,  
       StudentClasses (
         Classes ( id, name, order_index )
       )
@@ -258,7 +259,7 @@ app.post("/edit-student/:id", requireAuth, async (req, res) => {
   const studentId = req.params.id;
   const { name, age, parent_name, contact, class_id } = req.body;
 
-  // Update student
+  // Update main student data
   const { error: studentErr } = await supabaseClient
     .from("Student")
     .update({
@@ -269,27 +270,52 @@ app.post("/edit-student/:id", requireAuth, async (req, res) => {
     })
     .eq("id", studentId);
 
-  if (studentErr) {
-    console.error(studentErr);
-    return res.status(500).send("Failed to update student");
-  }
+  if (studentErr) return res.status(500).send("Failed to update student");
 
-  // Update StudentClasses
+  // Convert comma list → array
+  const classIds = class_id
+    ? class_id.split(",").map(id => id.trim()).filter(Boolean)
+    : [];
+
   await supabase
     .from("StudentClasses")
     .delete()
     .eq("student_id", studentId);
 
-  if (class_id && class_id.trim() !== "") {
+  if (classIds.length > 0) {
+    const rows = classIds.map(cid => ({
+      student_id: studentId,
+      class_id: cid
+    }));
+
     await supabase
       .from("StudentClasses")
-      .insert({
-        student_id: studentId,
-        class_id
-      });
+      .insert(rows);
   }
 
   res.redirect("/views");
+});
+
+
+app.post("/update-status/:id", requireAuth, async (req, res) => {
+  const studentId = req.params.id;
+  const { status } = req.body;
+
+  if (!status) {
+    return res.status(400).json({ error: "Missing status" });
+  }
+
+  const { error } = await supabase
+    .from("Student")
+    .update({ status })
+    .eq("id", studentId);
+
+  if (error) {
+    console.error("Status update failed:", error);
+    return res.status(500).json({ error: "Database update failed" });
+  }
+
+  res.json({ success: true });
 });
 
 app.listen(port, () =>
