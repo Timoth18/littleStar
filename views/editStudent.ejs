@@ -111,14 +111,7 @@
   // -------------------------------------------------------
   // LOAD EXISTING SELECTED CLASSES (safe JSON injection)
   // -------------------------------------------------------
-let selectedClasses = <%- JSON.stringify(
-  (student.StudentClasses || []).map(function(sc) {
-    return {
-      id: sc && sc.Classes ? sc.Classes.id : "",
-      label: sc && sc.Classes ? sc.Classes.name : ""
-    };
-  })
-) %>
+let selectedClasses = JSON.parse('<%- JSON.stringify((student.StudentClasses || []).map(function(sc){ return { id: sc && sc.Classes ? sc.Classes.id : "", label: sc && sc.Classes ? sc.Classes.name : "" }; })) %>');
 
   updateHiddenInput();
   renderSelectedClasses();
