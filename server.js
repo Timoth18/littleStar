@@ -473,9 +473,9 @@ app.get("/scores/:classId", requireAuth, async (req, res) => {
       .single();
 
     if (classErr) throw classErr;
-
+    
     // get students for class
-    const { data: students, error: studErr } = await client
+   const { data: students, error: studErr } = await client
       .from("student_classes")
       .select(`
         id,
@@ -485,15 +485,17 @@ app.get("/scores/:classId", requireAuth, async (req, res) => {
           age
         )
       `)
-      .eq("class_id", classId)
-      .order("student.name", { ascending: true });
+      .eq("class_id", classId);
 
     if (studErr) throw studErr;
+
+    // Sort students by name
+    students.sort((a, b) => a.student.name.localeCompare(b.student.name));
 
     res.render("grading-class", {
       cls,
       students,
-      classId
+      classId,
     });
   } catch (err) {
     console.error("GET /scores/:classId error:", err);
@@ -523,6 +525,16 @@ app.get("/scores/:classId/student/:studentId", requireAuth, async (req, res) => 
     if (scErr) throw scErr;
 
     const studentClassId = sc.id;
+
+      const { data: scnotes, error: notesErr } = await client
+      .from("student_classes")
+      .select("note")
+      .eq("id", studentClassId)
+      .single();
+
+    if (notesErr) throw notesErr;
+
+    const existingNote = scnotes?.note || "";
 
     // get all grading items for this class
     const { data: items, error: itemsErr } = await client
@@ -567,11 +579,12 @@ app.get("/scores/:classId/student/:studentId", requireAuth, async (req, res) => 
       items: categoriesMap[c]
     }));
 
-    res.render("score-table", {
+    res.render("rows/scoring-table", {
       categories,
       classId,
       studentId,
-      studentClassId
+      studentClassId,
+      existingNote
     });
 
   } catch (err) {
@@ -579,8 +592,6 @@ app.get("/scores/:classId/student/:studentId", requireAuth, async (req, res) => 
     res.status(500).send("Error loading score table");
   }
 });
-
-
 
 app.post("/scores/update", requireAuth, async (req, res) => {
   const { scoreId, gradingItemId, studentClassId, score } = req.body;

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>LittleStar | Grading - <%= cls.name %></title>
   <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="/grading-class.css">
+  <link rel="stylesheet" href="/grading.css">
   <style>
     .hidden { display: none; }
     .score-input { width: 60px; text-align: center; }
@@ -16,6 +16,7 @@
     .btn:hover { background: #4338ca; }
     .category-row { background: #e0e7ff; font-weight: bold; }
   </style>
+   <link rel="stylesheet" href="public/grading.css">
 </head>
 <body>
 <div class="layout">
@@ -44,122 +45,120 @@
     <section class="content">
 
       <!-- STUDENT DROPDOWN -->
-      <div class="mb-4">
-        <label class="label" for="studentSelect">Select Student:</label>
-        <select id="studentSelect" class="dropdown">
-          <option value="">-- choose --</option>
-          <% students.forEach(sc => { %>
-            <option value="<%= sc.id %>"><%= sc.name %></option>
-          <% }) %>
-        </select>
+      <label class="label" for="studentSelect">Select Student:</label>
+      <div class="pretty-select">
+      <div class="select-trigger" id="selectTrigger">
+        -- choose --
       </div>
+
+      <div class="select-options" id="selectOptions">
+        <% students.forEach(sc => { %>
+          <div 
+            class="option"
+            data-value="<%= sc.student.id %>"
+          >
+            <%= sc.student.name %>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+    <input type="hidden" id="studentSelect" name="studentSelect" />
 
       <!-- STUDENT INFO -->
       <div id="student-info" class="student-info hidden mb-4">
         <h2 id="s-name"></h2>
+        <p id="s-age"></p>
+        <p id="s-status"></p>
+        <p id="s-contactname"></p>
       </div>
 
       <hr class="divider hidden" id="divider">
 
       <!-- SCORE TABLE -->
-      <div id="score-table-container"></div>
-
-    </section>
-  </div>
+        <div id="score-table-container"></div>
+        
+      </section>
+    </div>
 </div>
-
 <script>
-document.getElementById("studentSelect").addEventListener("change", async function () {
-  const studentClassId = this.value;
-  if (!studentClassId) {
-    document.getElementById("score-table-container").innerHTML = "";
-    document.getElementById("student-info").classList.add("hidden");
-    document.getElementById("divider").classList.add("hidden");
-    return;
-  }
-
-  // fetch score data from backend
-  const res = await fetch(`/grading/<%= classId %>/student/${studentClassId}`);
-  const categories = await res.json(); // now backend returns JSON array
-
-  // show student info
-  document.getElementById("student-info").classList.remove("hidden");
-  document.getElementById("divider").classList.remove("hidden");
-  document.getElementById("s-name").textContent = this.options[this.selectedIndex].text;
-
-  // render score table
+  const trigger = document.getElementById("selectTrigger");
+  const options = document.getElementById("selectOptions");
+  const hiddenInput = document.getElementById("studentSelect");
   const container = document.getElementById("score-table-container");
-  container.innerHTML = ""; // clear old table
 
-  categories.forEach(cat => {
-    const table = document.createElement("table");
-    table.classList.add("table");
-
-    // category header
-    const catRow = document.createElement("tr");
-    catRow.classList.add("category-row");
-    const catCell = document.createElement("th");
-    catCell.colSpan = 3;
-    catCell.textContent = cat.category_name;
-    catRow.appendChild(catCell);
-    table.appendChild(catRow);
-
-    // table headers
-    const headerRow = document.createElement("tr");
-    ["Subcategory", "Score", "Action"].forEach(h => {
-      const th = document.createElement("th");
-      th.textContent = h;
-      headerRow.appendChild(th);
-    });
-    table.appendChild(headerRow);
-
-    // table rows
-    cat.items.forEach(item => {
-      const row = document.createElement("tr");
-
-      const nameTd = document.createElement("td");
-      nameTd.textContent = item.item_name;
-      row.appendChild(nameTd);
-
-      const scoreTd = document.createElement("td");
-      const input = document.createElement("input");
-      input.type = "number";
-      input.min = 1;
-      input.max = 5;
-      input.classList.add("score-input");
-      input.value = item.score || "";
-      input.dataset.id = item.score_id || "";
-      input.dataset.itemId = item.item_id;
-      scoreTd.appendChild(input);
-      row.appendChild(scoreTd);
-
-      const btnTd = document.createElement("td");
-      const btn = document.createElement("button");
-      btn.textContent = "Save";
-      btn.classList.add("btn");
-      btn.addEventListener("click", async () => {
-        const value = Number(input.value);
-        await fetch("/update-score", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            scoreId: input.dataset.id,
-            itemId: input.dataset.itemId,
-            studentClassId,
-            score: value
-          })
-        });
-        alert("Score saved!");
-      });
-      btnTd.appendChild(btn);
-      row.appendChild(btnTd);
-
-      table.appendChild(row);
-    });
-
-    container.appendChild(table);
+  // --- OPEN & CLOSE DROPDOWN ---
+  trigger.addEventListener("click", () => {
+    options.style.display = options.style.display === "block" ? "none" : "block";
   });
-});
+
+  // --- CLICK OUTSIDE TO CLOSE ---
+  document.addEventListener("click", (e) => {
+    if (!document.querySelector(".pretty-select").contains(e.target)) {
+      options.style.display = "none";
+    }
+  });
+
+  // --- WHEN USER SELECTS AN OPTION FROM THE CUSTOM DROPDOWN ---
+  document.querySelectorAll(".option").forEach(opt => {
+    opt.addEventListener("click", async () => {
+      const studentId = opt.dataset.value;
+
+      // Update UI
+      trigger.textContent = opt.textContent;
+      hiddenInput.value = studentId;
+      options.style.display = "none";
+
+      // If empty, reset UI
+      if (!studentId) {
+        container.innerHTML = "";
+        document.getElementById("student-info").classList.add("hidden");
+        document.getElementById("divider").classList.add("hidden");
+        return;
+      }
+
+      // Trigger the same behavior as your original select change
+      try {
+        const res = await fetch(`/scores/<%= cls.id %>/student/${studentId}`);
+        const html = await res.text();
+
+        container.innerHTML = html;
+
+        document.getElementById("student-info").classList.remove("hidden");
+        document.getElementById("divider").classList.remove("hidden");
+
+        // Set name in info card
+        document.getElementById("s-name").textContent = opt.textContent;
+      } catch (err) {
+        console.error("Error fetching score table:", err);
+      }
+    });
+  });
+
+  // --- SUPPORT REGULAR SELECT CHANGE (failsafe) ---
+  hiddenInput.addEventListener("change", async function () {
+    const studentId = this.value;
+
+    if (!studentId) {
+      container.innerHTML = "";
+      document.getElementById("student-info").classList.add("hidden");
+      document.getElementById("divider").classList.add("hidden");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/scores/<%= cls.id %>/student/${studentId}`);
+      const html = await res.text();
+
+      container.innerHTML = html;
+
+      document.getElementById("student-info").classList.remove("hidden");
+      document.getElementById("divider").classList.remove("hidden");
+      document.getElementById("s-name").textContent =
+        this.options[this.selectedIndex].text;
+    } catch (err) {
+      console.error("Error fetching score table:", err);
+    }
+  });
 </script>
 </body>
 </html>

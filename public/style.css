@@ -46,6 +46,7 @@
 .main {
   flex: 1;
   background: #f4f4f8;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
@@ -63,7 +64,9 @@
 
 /* CONTENT */
 .content {
-  padding: 20px;
+  min-height: 100vh;    
+  height: auto;         
+  padding: 20px; 
 }
 
 .section-title {

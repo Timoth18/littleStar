@@ -1,34 +1,76 @@
+<head>
+   <link rel="stylesheet" href="/public/grading.css">
+</head>
 <table class="score-table">
   <thead>
     <tr>
       <th>Category</th>
-      <th>Grading Item</th>
       <th>Score (1–5)</th>
     </tr>
   </thead>
 
   <tbody>
-  <% categories.forEach(cat => { %>
-    <tr class="category-row">
-      <td colspan="3"><strong><%= cat.category_name %></strong></td>
-    </tr>
-
-    <% cat.items.forEach(item => { %>
-      <tr>
-        <td></td>
-        <td><%= item.item_name %></td>
-        <td>
-          <input 
-            type="number" 
-            min="1" 
-            max="5"
-            class="score-input"
-            data-id="<%= item.score_id %>"
-            value="<%= item.score ?? '' %>"
-          />
-        </td>
+    <% categories.forEach(cat => { %>
+      <tr class="category-row">
+        <td colspan="2"><%= cat.category_name %></td>
       </tr>
+      <% cat.items.forEach(item => { %>
+        <tr>
+          <td class="grading-item"> <%= item.subcategory %></td>
+          <td>
+            <input 
+              type="number" 
+              min="1" 
+              max="5"
+              class="score-input"
+              data-id="<%= item.score_id %>"
+              data-item-id="<%= item.id %>"
+              value="<%= item.score_value ?? '' %>"
+              />
+            </td>
+          </tr>
+      <% }) %>
     <% }) %>
-  <% }) %>
   </tbody>
+  <div class="general-notes-section">
+  <h3 class="notes-header">General Notes</h3>
+  <textarea 
+    id="generalNotes" 
+    rows="4" 
+    class="notes-input"
+    placeholder="Write notes about this student here..."
+  ></textarea>
+</div>
+  <script>
+    document.querySelectorAll('.score-input').forEach(input => {
+      input.addEventListener('change', async (e) => {
+        const scoreId = e.target.getAttribute('data-id');
+        const itemId = e.target.getAttribute('data-item-id');
+        const newValue = e.target.value;
+
+        try {
+          const response = await fetch('/update-score', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              scoreId,
+              itemId,
+              newValue
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update score');
+          }
+
+          alert('Score updated successfully');
+        } catch (error) {
+          console.error('Error updating score:', error);
+          alert('Error updating score');
+        }
+      });
+    });
+  </script>
 </table>
