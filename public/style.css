@@ -503,3 +503,8 @@
 .selected-class-tag .remove-tag:hover {
   color: #d93025;
 }
+
+.btn-primary:disabled {
+  background: gray;
+  cursor: not-allowed;
+}

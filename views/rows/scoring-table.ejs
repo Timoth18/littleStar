@@ -1,0 +1,34 @@
+<table class="score-table">
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Grading Item</th>
+      <th>Score (1–5)</th>
+    </tr>
+  </thead>
+
+  <tbody>
+  <% categories.forEach(cat => { %>
+    <tr class="category-row">
+      <td colspan="3"><strong><%= cat.category_name %></strong></td>
+    </tr>
+
+    <% cat.items.forEach(item => { %>
+      <tr>
+        <td></td>
+        <td><%= item.item_name %></td>
+        <td>
+          <input 
+            type="number" 
+            min="1" 
+            max="5"
+            class="score-input"
+            data-id="<%= item.score_id %>"
+            value="<%= item.score ?? '' %>"
+          />
+        </td>
+      </tr>
+    <% }) %>
+  <% }) %>
+  </tbody>
+</table>

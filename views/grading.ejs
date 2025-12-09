@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LittleStar | Grading</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/grading.css">
+</head>
+<body>
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <h2 class="logo">LittleStar</h2>
+      <ul>
+        <li><a href="/home">Dashboard</a></li>
+        <li><a href="/views">Students</a></li>
+        <li><a class="active" href="/scores">Scores</a></li>
+        <li><a href="/reports">Reports</a></li>
+        <li><a href="/manage-roles">Settings</a></li>
+      </ul>
+    </nav>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="main">
+
+      <!-- HEADER -->
+      <header class="header">
+        <h1>Grading</h1>
+      </header>
+
+      <!-- CONTENT AREA -->
+      <section class="content">
+
+        <div class="content-header">
+          <h2>Select a Class</h2>
+        </div>
+
+        <!-- CLASS CARDS -->
+        <div class="class-list-grid">
+          <% classes.forEach(c => { %>
+            <a class="class-card" href="/grading/<%= c.id %>">
+              <h3><%= c.name %></h3>
+            </a>
+          <% }) %>
+        </div>
+
+      </section>
+
+    </div>
+  </div>
+
+</body>
+</html>

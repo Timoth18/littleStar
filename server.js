@@ -1,6 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
-import { supabase, supabaseUser } from "./db.js"; // supabase = service role
+import { supabase, supabaseUser } from "./db.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 
@@ -15,59 +15,142 @@ app.use(express.json());
 app.use(cookieParser());
 app.set("view engine", "ejs");
 
-// Middleware to require logged-in users
-function requireAuth(req, res, next) {
-  const token = req.cookies['supabase-auth-token'];
 
-  if (!token) {
-    return res.redirect('/login'); // Not logged in
-  }
+/* ------------------------------
+Utility: Ensure Scores Exist for a Student-Class
+ - Uses service-role `supabase` for inserts (trusted)
+ - Inserts per-row with logging to surface exact errors
+------------------------------*/
+async function ensureScoresForStudentClass(client, studentClassId, classId) {
+  try {
+    // get grading items for that class
+    const { data: items, error: itemErr } = await client
+      .from("gradingitems")
+      .select("id")
+      .eq("class_id", classId);
 
-  // Verify user with Supabase
-  supabase.auth.getUser(token).then(({ data: { user }, error }) => {
-    if (error || !user) {
-      return res.redirect('/login');
+    if (itemErr) {
+      console.error("[ensureScores] failed to load gradingitems for class", classId, itemErr);
+      return;
     }
-    req.user = user; // attach user info to request
+    if (!items || items.length === 0) {
+      // nothing to create
+      // console.log(`[ensureScores] no grading items for class ${classId}`);
+      return;
+    }
+
+    // find existing scores for this student_class
+    const { data: existingScores, error: existingErr } = await client
+      .from("score")
+      .select("grading_item_id")
+      .eq("student_class_id", studentClassId);
+
+    if (existingErr) {
+      console.error("[ensureScores] failed to load existing scores for student_class", studentClassId, existingErr);
+      return;
+    }
+
+    const existing = new Set(existingScores?.map(s => s.grading_item_id) || []);
+
+    // create missing rows only (insert one-by-one so we can log precise failures)
+    const rowsToInsert = items
+      .filter(item => !existing.has(item.id))
+      .map(item => ({
+        student_class_id: studentClassId,
+        grading_item_id: item.id,
+        score: null, // empty by default (your schema allows NULL)
+      }));
+
+    if (rowsToInsert.length === 0) {
+      // nothing to insert
+      // console.log(`[ensureScores] nothing to insert for student_class ${studentClassId}`);
+      return;
+    }
+
+    for (const row of rowsToInsert) {
+      // insert row-by-row to expose FK / unique errors precisely
+      const { data: inserted, error: insertErr } = await client
+        .from("score")
+        .insert(row)
+        .select();
+
+      if (insertErr) {
+        console.error("[ensureScores] insert failed for row:", row, insertErr);
+        // continue trying other rows instead of aborting; adjust if you prefer to throw
+      } else {
+        // optional: log inserted row id(s)
+        // console.log("[ensureScores] inserted score row:", inserted);
+      }
+    }
+
+  } catch (err) {
+    console.error("[ensureScores] unexpected error:", err);
+  }
+}
+
+
+/* ------------------------------
+Middleware: Require Auth
+------------------------------ */
+function requireAuth(req, res, next) {
+  const token = req.cookies["supabase-auth-token"];
+  if (!token) return res.redirect("/login");
+
+  supabase.auth.getUser(token).then(({ data: { user }, error }) => {
+    if (error || !user) return res.redirect("/login");
+    req.user = user;
     next();
   });
 }
 
-// Login routes
-app.get('/', (req, res) => res.render('login'));
-app.get("/login", async (req, res) => res.render('login'));
+/* ------------------------------
+LOGIN
+------------------------------ */
+app.get("/", (req, res) => res.render("login"));
+app.get("/login", (req, res) => res.render("login"));
 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  
-  if (error) return res.render("login", { error: error.message });
 
-  res.cookie("supabase-auth-token", data.session.access_token, { httpOnly: true });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    return res.render("login", { error: error.message });
+  }
+
+  res.cookie("supabase-auth-token", data.session.access_token, {
+    httpOnly: true,
+  });
+
   res.redirect("/home");
 });
 
-// Home
-app.get("/home", requireAuth, async (req, res) => {
-  res.render('home');
-});
+/* ------------------------------
+HOME
+------------------------------ */
+app.get("/home", requireAuth, (req, res) => res.render("home"));
 
-// View students
+/* ------------------------------
+VIEW STUDENTS
+------------------------------ */
 app.get("/views", requireAuth, async (req, res) => {
-  const token = req.cookies['supabase-auth-token'];
-  const supabaseClient = supabaseUser(token); // role-based client
+  const token = req.cookies["supabase-auth-token"];
+  const supabaseClient = supabaseUser(token);
 
   const { data: students, error } = await supabaseClient
-    .from('Student')
-    .select(`
-      id,
+    .from("student")
+    .select(
+      `id,
       name,
       age,
-      status,  
-      StudentClasses (
-        Classes ( id, name, order_index )
-      )
-    `);
+      status,
+      student_classes (
+        classes ( id, name, order_index )
+      )`
+    );
 
   if (error) {
     console.error("Supabase query error:", error);
@@ -77,49 +160,48 @@ app.get("/views", requireAuth, async (req, res) => {
   res.render("views", { students });
 });
 
-// Add student form
+/* ------------------------------
+ADD STUDENT FORM
+------------------------------ */
 app.get("/add-student", requireAuth, async (req, res) => {
-  const token = req.cookies['supabase-auth-token'];
+  const token = req.cookies["supabase-auth-token"];
   const supabaseClient = supabaseUser(token);
 
   const { data: classes, error } = await supabaseClient
-    .from("Classes")
+    .from("classes")
     .select("*")
-    .order("name", { ascending: true });
+    .order("name");
 
-  if (error) {
-    console.error("Supabase query error:", error);
-    return res.send("Database error");
-  }
+  if (error) return res.send("Database error");
 
-  res.render('addStudent', { classes });
+  res.render("addStudent", { classes });
 });
 
-// Submit student + classes
+/* ------------------------------
+SUBMIT NEW STUDENT + CLASSES
+------------------------------ */
 app.post("/submit", requireAuth, async (req, res) => {
-  const token = req.cookies['supabase-auth-token'];
+  const token = req.cookies["supabase-auth-token"];
   const supabaseClient = supabaseUser(token);
 
   const { name, age, parent_name, contact } = req.body;
 
-  // Arrays from hidden inputs
   const rawIds = req.body.class_id?.split(",") || [];
   const rawLabels = req.body.class_label?.split(",") || [];
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
   let finalClassIds = [];
 
-  // Create new classes if needed
   for (let i = 0; i < rawIds.length; i++) {
     const id = rawIds[i];
     const label = rawLabels[i];
 
     if (uuidRegex.test(id)) {
-      finalClassIds.push(id); // existing class
+      finalClassIds.push(id);
     } else {
-      // Create new class (role-based insert)
       const { data: newClass, error: classErr } = await supabaseClient
-        .from("Classes")
+        .from("classes")
         .insert({ name: label })
         .select()
         .single();
@@ -133,14 +215,13 @@ app.post("/submit", requireAuth, async (req, res) => {
     }
   }
 
-  // Insert student (trusted server insert)
   const { data: student, error: studentErr } = await supabase
-    .from("Student")
+    .from("student")
     .insert({
       name,
       age: Number(age),
       contactname: parent_name,
-      contactnumber: contact
+      contactnumber: contact,
     })
     .select()
     .single();
@@ -150,170 +231,200 @@ app.post("/submit", requireAuth, async (req, res) => {
     return res.status(500).send("Failed to add student");
   }
 
-  // Link student to classes (trusted server insert)
-  const classLinks = finalClassIds.map(cid => ({
+  const classLinks = finalClassIds.map((cid) => ({
     student_id: student.id,
-    class_id: cid
+    class_id: cid,
   }));
 
-  const { error: linkErr } = await supabase
-    .from("StudentClasses")
-    .insert(classLinks);
+  // insert and get the new student_classes rows (so we have their ids)
+  const { data: studentClasses, error: linkErr } = await supabase
+    .from("student_classes")
+    .insert(classLinks)
+    .select();
 
   if (linkErr) {
     console.error("Error linking classes:", linkErr);
     return res.status(500).send("Failed to link classes");
   }
 
+  // Debugging: show created student_classes
+  console.log("[/submit] studentClasses created:", studentClasses);
+
+  /* ------------------------------
+  PREPOPULATE SCORE TABLE
+   - using service-role client `supabase` for trusted inserts
+  ------------------------------ */
+  for (const sc of studentClasses) {
+    console.log("[/submit] prepopulating for student_class:", sc.id, "class:", sc.class_id);
+    await ensureScoresForStudentClass(supabase, sc.id, sc.class_id);
+  }
+
   res.redirect("/views");
 });
 
-// Search students
+/* ------------------------------
+SEARCH
+------------------------------ */
 app.get("/search-students", requireAuth, async (req, res) => {
-  const token = req.cookies['supabase-auth-token'];
+  const token = req.cookies["supabase-auth-token"];
   const supabaseClient = supabaseUser(token);
 
-  const q = req.query.q || "";
+  const q = req.query.q?.toLowerCase() || "";
 
   let { data: students, error } = await supabaseClient
-    .from("Student")
-    .select(`
-      id,
+    .from("student")
+    .select(
+      `id,
       name,
       age,
       contactname,
       contactnumber,
-      StudentClasses!inner (
-        Classes!inner (id, name, order_index)
-      )
-    `)
+      student_classes!inner (
+        classes!inner (id, name, order_index)
+      )`
+    )
     .or(`name.ilike.%${q}%`)
     .order("id", { ascending: false });
 
   if (!error && q) {
-    const lower = q.toLowerCase();
-    students = students.filter(s =>
-      s.name.toLowerCase().includes(lower) ||
-      s.StudentClasses.some(sc =>
-        sc.Classes.name.toLowerCase().includes(lower)
-      )
+    students = students.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.student_classes.some((sc) =>
+          sc.classes.name.toLowerCase().includes(q)
+        )
     );
   }
 
-  if (error) {
-    console.error("Search error:", error);
-    return res.status(500).json({ error: "Database error" });
-  }
+  if (error) return res.status(500).json({ error: "Database error" });
 
   res.render("rows/studentRows", { students });
 });
 
-// Edit student
+/* ------------------------------
+EDIT STUDENT
+------------------------------ */
 app.get("/edit-student/:id", requireAuth, async (req, res) => {
-  const token = req.cookies['supabase-auth-token'];
+  const token = req.cookies["supabase-auth-token"];
   const supabaseClient = supabaseUser(token);
-
   const studentId = req.params.id;
 
   const { data: student, error: studentErr } = await supabaseClient
-    .from("Student")
-    .select(`
-      id,
+    .from("student")
+    .select(
+      `id,
       name,
       age,
       contactname,
       contactnumber,
       status,
-      StudentClasses (
+      student_classes (
         id,
         class_id,
-        Classes ( id, name, order_index )
-      )
-    `)
+        classes ( id, name, order_index )
+      )`
+    )
     .eq("id", studentId)
     .single();
 
-  if (studentErr || !student) {
-    console.error("Failed to fetch student:", studentErr);
+  if (studentErr || !student)
     return res.status(404).send("Student not found");
-  }
 
   const { data: classes, error: classErr } = await supabaseClient
-    .from("Classes")
+    .from("classes")
     .select("*")
-    .order("order_index", { ascending: true });
+    .order("order_index");
 
-  if (classErr) {
-    console.error("Failed to fetch classes:", classErr);
-    return res.status(500).send("Failed to load classes");
-  }
+  if (classErr) return res.status(500).send("Failed to load classes");
 
   res.render("editStudent", { student, classes });
 });
 
-// Update student
+/* ------------------------------
+UPDATE STUDENT
+------------------------------ */
 app.post("/edit-student/:id", requireAuth, async (req, res) => {
-  const token = req.cookies['supabase-auth-token'];
+  const token = req.cookies["supabase-auth-token"];
   const supabaseClient = supabaseUser(token);
 
   const studentId = req.params.id;
   const { name, age, parent_name, contact, class_id } = req.body;
 
-  // Update main student data
   const { error: studentErr } = await supabaseClient
-    .from("Student")
+    .from("student")
     .update({
       name,
       age: Number(age),
       contactname: parent_name,
-      contactnumber: contact
+      contactnumber: contact,
     })
     .eq("id", studentId);
 
-  if (studentErr) return res.status(500).send("Failed to update student");
+  if (studentErr) {
+    console.error("Failed to update student:", studentErr);
+    return res.status(500).send("Failed to update student");
+  }
 
-  // Convert comma list → array
   const classIds = class_id
-    ? class_id.split(",").map(id => id.trim()).filter(Boolean)
+    ? class_id.split(",").map((id) => id.trim()).filter(Boolean)
     : [];
 
-  await supabase
-    .from("StudentClasses")
+  // delete old links (service role)
+  const { error: deleteErr } = await supabase
+    .from("student_classes")
     .delete()
     .eq("student_id", studentId);
 
+  if (deleteErr) {
+    console.error("Failed to delete old student_classes:", deleteErr);
+    return res.status(500).send("Failed to update classes");
+  }
+
+  // insert new links and prepopulate
   if (classIds.length > 0) {
-    const rows = classIds.map(cid => ({
+    const rows = classIds.map((cid) => ({
       student_id: studentId,
-      class_id: cid
+      class_id: cid,
     }));
 
-    await supabase
-      .from("StudentClasses")
-      .insert(rows);
+    const { data: inserted, error: insertErr } = await supabase
+      .from("student_classes")
+      .insert(rows)
+      .select();
+
+    if (insertErr) {
+      console.error("Failed to insert new student_classes:", insertErr);
+      return res.status(500).send("Failed to update classes");
+    }
+
+    console.log("[/edit-student] inserted student_classes:", inserted);
+
+    for (const sc of inserted) {
+      console.log("[/edit-student] prepopulating for student_class:", sc.id, "class:", sc.class_id);
+      await ensureScoresForStudentClass(supabase, sc.id, sc.class_id);
+    }
+  } else {
+    // nothing to insert — no classes assigned
   }
 
   res.redirect("/views");
 });
 
-
+/* ------------------------------
+UPDATE STATUS
+------------------------------ */
 app.post("/update-status/:id", requireAuth, async (req, res) => {
   const studentId = req.params.id;
   const { status } = req.body;
 
-  if (!status) {
-    return res.status(400).json({ error: "Missing status" });
-  }
+  if (!status) return res.status(400).json({ error: "Missing status" });
 
   const { error } = await supabase
-    .from("Student")
+    .from("student")
     .update({ status })
     .eq("id", studentId);
 
-  if (error) {
-    console.error("Status update failed:", error);
-    return res.status(500).json({ error: "Database update failed" });
-  }
+  if (error) return res.status(500).json({ error: "Database update failed" });
 
   res.json({ success: true });
 });
@@ -321,3 +432,189 @@ app.post("/update-status/:id", requireAuth, async (req, res) => {
 app.listen(port, () =>
   console.log(`Server running at http://localhost:${port}`)
 );
+
+/* ------------------------------
+GRADING PAGE
+------------------------------ */
+app.get("/scores", requireAuth, async (req, res) => {
+  try {
+    const token = req.cookies["supabase-auth-token"];
+    const client = supabaseUser(token);
+
+    const { data: classes, error } = await client
+      .from("classes")
+      .select("*")
+      .order("order_index");
+
+    if (error) throw error;
+
+    res.render("grading", { classes });
+  } catch (err) {
+    console.error("GET /scores error:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+/* -----------------------------------------------
+GRADING: SELECT STUDENT WITHIN CLASS
+----------------------------------------------- */
+app.get("/scores/:classId", requireAuth, async (req, res) => {
+  const { classId } = req.params;
+
+  try {
+    const token = req.cookies["supabase-auth-token"];
+    const client = supabaseUser(token);
+
+    // get class
+    const { data: cls, error: classErr } = await client
+      .from("classes")
+      .select("*")
+      .eq("id", classId)
+      .single();
+
+    if (classErr) throw classErr;
+
+    // get students for class
+    const { data: students, error: studErr } = await client
+      .from("student_classes")
+      .select(`
+        id,
+        student:student_id (
+          id,
+          name,
+          age
+        )
+      `)
+      .eq("class_id", classId)
+      .order("student.name", { ascending: true });
+
+    if (studErr) throw studErr;
+
+    res.render("grading-class", {
+      cls,
+      students,
+      classId
+    });
+  } catch (err) {
+    console.error("GET /scores/:classId error:", err);
+    res.status(500).send("Error loading grading page");
+  }
+});
+
+/*-----------------------------------
+RENDER SCORE TABLE
+------------------------------------- */
+
+app.get("/scores/:classId/student/:studentId", requireAuth, async (req, res) => {
+  const { classId, studentId } = req.params;
+
+  try {
+    const token = req.cookies["supabase-auth-token"]
+    const client = supabaseUser(token);
+
+    // get student_class_id
+    const { data: sc, error: scErr } = await client
+      .from("student_classes")
+      .select("id")
+      .eq("class_id", classId)
+      .eq("student_id", studentId)
+      .single();
+
+    if (scErr) throw scErr;
+
+    const studentClassId = sc.id;
+
+    // get all grading items for this class
+    const { data: items, error: itemsErr } = await client
+      .from("gradingitems")
+      .select("*")
+      .eq("class_id", classId)
+      .order("order_index");
+
+    if (itemsErr) throw itemsErr;
+
+    // get existing scores
+    const { data: scores, error: scoreErr } = await client
+      .from("score")
+      .select("*")
+      .eq("student_class_id", studentClassId);
+
+    if (scoreErr) throw scoreErr;
+
+    // attach scores to items
+    const scoreMap = {};
+    scores.forEach(s => {
+      scoreMap[s.grading_item_id] = s;
+    });
+
+    const withScores = items.map(item => ({
+      ...item,
+      score_id: scoreMap[item.id]?.id || null,
+      score_value: scoreMap[item.id]?.score || null
+    }));
+
+    // group by category
+    const categoriesMap = {};
+    for (const item of withScores) {
+      if (!categoriesMap[item.category]) {
+        categoriesMap[item.category] = [];
+      }
+      categoriesMap[item.category].push(item);
+    }
+
+    const categories = Object.keys(categoriesMap).map(c => ({
+      category_name: c,
+      items: categoriesMap[c]
+    }));
+
+    res.render("score-table", {
+      categories,
+      classId,
+      studentId,
+      studentClassId
+    });
+
+  } catch (err) {
+    console.error("GET score table error:", err);
+    res.status(500).send("Error loading score table");
+  }
+});
+
+
+
+app.post("/scores/update", requireAuth, async (req, res) => {
+  const { scoreId, gradingItemId, studentClassId, score } = req.body;
+
+  try {
+    const token = req.cookies["supabase-auth-token"]
+    const client = supabaseUser(token);
+
+    let result;
+
+    if (scoreId) {
+      // update
+      result = await client
+        .from("score")
+        .update({ score })
+        .eq("id", scoreId);
+    } else {
+      // insert
+      result = await client
+        .from("score")
+        .insert({
+          grading_item_id: gradingItemId,
+          student_class_id: studentClassId,
+          score
+        })
+        .select()
+        .single();
+    }
+
+    if (result.error) throw result.error;
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("POST /scores/update error:", err);
+    res.status(500).json({ error: "Cannot update score" });
+  }
+});

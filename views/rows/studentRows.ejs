@@ -9,9 +9,9 @@
   <td><%= student.name %></td>
   <td><%= student.age %></td>
   <td>
-    <%= student.StudentClasses
-          .sort((a, b) => a.Classes.order_index - b.Classes.order_index)
-          .map(sc => sc.Classes.name)
+    <%= student.student_classes
+          .sort((a, b) => a.classes.order_index - b.classes.order_index)
+          .map(sc => sc.classes.name)
           .join(", ") 
     %>
   </td>

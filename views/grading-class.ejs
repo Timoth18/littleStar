@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LittleStar | Grading - <%= cls.name %></title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/grading-class.css">
+  <style>
+    .hidden { display: none; }
+    .score-input { width: 60px; text-align: center; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    .table th, .table td { border: 1px solid #ccc; padding: 0.5rem; }
+    .table th { background: #f3f3f3; }
+    .label { font-weight: bold; margin-right: 0.5rem; }
+    .btn { padding: 0.4rem 0.8rem; background: #4f46e5; color: white; border: none; cursor: pointer; border-radius: 0.25rem; }
+    .btn:hover { background: #4338ca; }
+    .category-row { background: #e0e7ff; font-weight: bold; }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <h2 class="logo">LittleStar</h2>
+    <ul>
+      <li><a href="/home">Dashboard</a></li>
+      <li><a href="/views">Students</a></li>
+      <li><a class="active" href="/scores">Scores</a></li>
+      <li><a href="/reports">Reports</a></li>
+      <li><a href="/manage-roles">Settings</a></li>
+    </ul>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- HEADER -->
+    <header class="header">
+      <h1><%= cls.name %> — Grading</h1>
+    </header>
+
+    <!-- CONTENT -->
+    <section class="content">
+
+      <!-- STUDENT DROPDOWN -->
+      <div class="mb-4">
+        <label class="label" for="studentSelect">Select Student:</label>
+        <select id="studentSelect" class="dropdown">
+          <option value="">-- choose --</option>
+          <% students.forEach(sc => { %>
+            <option value="<%= sc.id %>"><%= sc.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <!-- STUDENT INFO -->
+      <div id="student-info" class="student-info hidden mb-4">
+        <h2 id="s-name"></h2>
+      </div>
+
+      <hr class="divider hidden" id="divider">
+
+      <!-- SCORE TABLE -->
+      <div id="score-table-container"></div>
+
+    </section>
+  </div>
+</div>
+
+<script>
+document.getElementById("studentSelect").addEventListener("change", async function () {
+  const studentClassId = this.value;
+  if (!studentClassId) {
+    document.getElementById("score-table-container").innerHTML = "";
+    document.getElementById("student-info").classList.add("hidden");
+    document.getElementById("divider").classList.add("hidden");
+    return;
+  }
+
+  // fetch score data from backend
+  const res = await fetch(`/grading/<%= classId %>/student/${studentClassId}`);
+  const categories = await res.json(); // now backend returns JSON array
+
+  // show student info
+  document.getElementById("student-info").classList.remove("hidden");
+  document.getElementById("divider").classList.remove("hidden");
+  document.getElementById("s-name").textContent = this.options[this.selectedIndex].text;
+
+  // render score table
+  const container = document.getElementById("score-table-container");
+  container.innerHTML = ""; // clear old table
+
+  categories.forEach(cat => {
+    const table = document.createElement("table");
+    table.classList.add("table");
+
+    // category header
+    const catRow = document.createElement("tr");
+    catRow.classList.add("category-row");
+    const catCell = document.createElement("th");
+    catCell.colSpan = 3;
+    catCell.textContent = cat.category_name;
+    catRow.appendChild(catCell);
+    table.appendChild(catRow);
+
+    // table headers
+    const headerRow = document.createElement("tr");
+    ["Subcategory", "Score", "Action"].forEach(h => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      headerRow.appendChild(th);
+    });
+    table.appendChild(headerRow);
+
+    // table rows
+    cat.items.forEach(item => {
+      const row = document.createElement("tr");
+
+      const nameTd = document.createElement("td");
+      nameTd.textContent = item.item_name;
+      row.appendChild(nameTd);
+
+      const scoreTd = document.createElement("td");
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = 1;
+      input.max = 5;
+      input.classList.add("score-input");
+      input.value = item.score || "";
+      input.dataset.id = item.score_id || "";
+      input.dataset.itemId = item.item_id;
+      scoreTd.appendChild(input);
+      row.appendChild(scoreTd);
+
+      const btnTd = document.createElement("td");
+      const btn = document.createElement("button");
+      btn.textContent = "Save";
+      btn.classList.add("btn");
+      btn.addEventListener("click", async () => {
+        const value = Number(input.value);
+        await fetch("/update-score", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scoreId: input.dataset.id,
+            itemId: input.dataset.itemId,
+            studentClassId,
+            score: value
+          })
+        });
+        alert("Score saved!");
+      });
+      btnTd.appendChild(btn);
+      row.appendChild(btnTd);
+
+      table.appendChild(row);
+    });
+
+    container.appendChild(table);
+  });
+});
+</script>
+</body>
+</html>
