@@ -482,7 +482,9 @@ app.get("/scores/:classId", requireAuth, async (req, res) => {
         student:student_id (
           id,
           name,
-          age
+          age,
+          contactname,
+          contactnumber
         )
       `)
       .eq("class_id", classId);
@@ -593,39 +595,51 @@ app.get("/scores/:classId/student/:studentId", requireAuth, async (req, res) => 
   }
 });
 
-app.post("/scores/update", requireAuth, async (req, res) => {
-  const { scoreId, gradingItemId, studentClassId, score } = req.body;
+app.post("/save-score", async (req, res) => {
+  const { scoreId, itemId, studentClassId, score } = req.body;
 
   try {
-    const token = req.cookies["supabase-auth-token"]
+    // Use UPSERT for unique (student_class_id, grading_item_id)
+    const { data, error } = await supabase
+      .from("score")
+      .upsert({
+        id: scoreId || undefined,
+        grading_item_id: itemId,
+        student_class_id: studentClassId,
+        score: score,
+        updated_at: new Date()
+      }, {
+        onConflict: "student_class_id, grading_item_id"
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error("Save score error:", err);
+    res.status(500).json({ error: "Failed to save score" });
+  }
+});
+
+app.post("/save-notes", requireAuth, async (req, res) => {
+  const { studentClassId, note } = req.body;
+
+  try {
+    const token = req.cookies["supabase-auth-token"];
     const client = supabaseUser(token);
 
-    let result;
+    const { error } = await client
+      .from("student_classes")
+      .update({ note })
+      .eq("id", studentClassId);
 
-    if (scoreId) {
-      // update
-      result = await client
-        .from("score")
-        .update({ score })
-        .eq("id", scoreId);
-    } else {
-      // insert
-      result = await client
-        .from("score")
-        .insert({
-          grading_item_id: gradingItemId,
-          student_class_id: studentClassId,
-          score
-        })
-        .select()
-        .single();
-    }
-
-    if (result.error) throw result.error;
+    if (error) throw error;
 
     res.json({ success: true });
   } catch (err) {
-    console.error("POST /scores/update error:", err);
-    res.status(500).json({ error: "Cannot update score" });
+    console.error("Error saving notes:", err);
+    res.status(500).json({ error: "Failed to save notes" });
   }
 });

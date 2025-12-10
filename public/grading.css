@@ -29,15 +29,6 @@
   padding: 20px;
 }
 
-.dropdown {
-  padding: 8px;
-  margin-bottom: 20px;
-}
-
-.student-info {
-  margin-top: 15px;
-}
-
 .hidden {
   display: none;
 }
@@ -64,6 +55,7 @@
   padding: 16px 20px;
   border-bottom: 2px solid #d7dbf5;
   font-weight: 600;
+  font-size: 1.1rem;
 }
 
 .score-table td {
@@ -156,10 +148,12 @@
 }
 
 .pretty-select {
-  width: 240px;
+  width: 400px;
   position: relative;
   font-size: 14px;
   user-select: none;
+  margin-bottom: 20px;
+
 }
 
 .select-trigger {
@@ -214,4 +208,38 @@
 
 .option:active {
   background: #dce7ff;
+}
+
+.student-info {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-top: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  border-left: 4px solid #4a90e2;
+
+  transition: all 0.2s ease;
+}
+
+.student-info h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+.student-info p {
+  font-size: 0.95rem;
+  margin: 4px 0;
+  color: #555;
+}
+
+.student-info.hidden {
+  display: none;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 16px 0;
 }

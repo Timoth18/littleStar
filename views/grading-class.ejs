@@ -56,6 +56,10 @@
           <div 
             class="option"
             data-value="<%= sc.student.id %>"
+            data-name="<%= sc.student.name %>"
+            data-age="<%= sc.student.age %>"
+            data-contactname="<%= sc.student.contactname %>"
+            data-contactnumber="<%= sc.student.contactnumber %>"
           >
             <%= sc.student.name %>
           </div>
@@ -68,8 +72,8 @@
       <div id="student-info" class="student-info hidden mb-4">
         <h2 id="s-name"></h2>
         <p id="s-age"></p>
-        <p id="s-status"></p>
         <p id="s-contactname"></p>
+        <p id="s-contactnumber"></p>
       </div>
 
       <hr class="divider hidden" id="divider">
@@ -85,6 +89,15 @@
   const options = document.getElementById("selectOptions");
   const hiddenInput = document.getElementById("studentSelect");
   const container = document.getElementById("score-table-container");
+  function showToast(message) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 1800);
+}
 
   // --- OPEN & CLOSE DROPDOWN ---
   trigger.addEventListener("click", () => {
@@ -122,14 +135,20 @@
         const html = await res.text();
 
         container.innerHTML = html;
+        showToast("Score table loaded");
 
         document.getElementById("student-info").classList.remove("hidden");
         document.getElementById("divider").classList.remove("hidden");
 
         // Set name in info card
         document.getElementById("s-name").textContent = opt.textContent;
+        document.getElementById("s-age").textContent = "Age: " + (opt.dataset.age ?? "-");
+        document.getElementById("s-contactname").textContent = "Contact Name: " + (opt.dataset.contactname ?? "-");
+        document.getElementById("s-contactnumber").textContent = "Contact Number: " + (opt.dataset.contactnumber ?? "-");
+
       } catch (err) {
         console.error("Error fetching score table:", err);
+        showToast("Failed to load score table")
       }
     });
   });
@@ -160,5 +179,119 @@
     }
   });
 </script>
+<script>
+// ---- Toast ----
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 1800);
+}
+
+// ---- Debounce helper ----
+function debounce(fn, delay = 400) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+const saveScore = debounce(async (input) => {
+  let score = Number(input.value);
+
+  // clamp 1–5
+  if (score > 5) score = 5;
+  if (score < 1) score = 1;
+  input.value = score;
+
+  const scoreId = input.dataset.id;
+  const itemId = input.dataset.itemId;
+  const studentClassId = input.dataset.studentClassId;
+
+  try {
+    const res = await fetch("/save-score", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        scoreId,
+        itemId,
+        studentClassId,
+        score
+      })
+    });
+
+    if (!res.ok) throw new Error();
+
+    showToast("Saved!");
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to save");
+  }
+}, 500);
+
+// ---- INPUT LISTENER (delegated) ----
+document.addEventListener("input", (e) => {
+  if (!e.target.classList.contains("score-input")) return;
+  saveScore(e.target);
+});
+
+document.addEventListener("input", (e) => {
+  if (e.target.id === "generalNotes") {
+    saveNotes();
+  }
+});
+
+// ---- Save Notes (debounced) ----
+const saveNotes = debounce(async () => {
+  const notesEl = document.getElementById("generalNotes");
+  const note = notesEl.value;
+  const studentClassId = notesEl.dataset.studentClassId;
+
+  try {
+    const res = await fetch("/save-notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentClassId, note })
+    });
+
+    if (!res.ok) throw new Error();
+
+    showToast("Notes Saved!");
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to save notes");
+  }
+}, 600);
+
+</script>
 </body>
+<div id="toast"></div>
+
+<style>
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #333;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 6px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: 0.3s ease;
+  pointer-events: none;
+  font-size: 14px;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>
+
 </html>

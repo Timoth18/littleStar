@@ -12,21 +12,23 @@
   <tbody>
     <% categories.forEach(cat => { %>
       <tr class="category-row">
-        <td colspan="2"><%= cat.category_name %></td>
+       <td colspan="2">
+          <%= cat.category_name ? cat.category_name.charAt(0).toUpperCase() + cat.category_name.slice(1) : '' %>
+        </td>
       </tr>
       <% cat.items.forEach(item => { %>
         <tr>
           <td class="grading-item"> <%= item.subcategory %></td>
           <td>
-            <input 
-              type="number" 
-              min="1" 
-              max="5"
-              class="score-input"
-              data-id="<%= item.score_id %>"
-              data-item-id="<%= item.id %>"
-              value="<%= item.score_value ?? '' %>"
-              />
+          <input 
+            type="number"
+            class="score-input"
+            min="1" max="5"
+            data-id="<%= item.score_id %>"
+            data-item-id="<%= item.id %>"
+            data-student-class-id="<%= studentClassId %>"
+            value="<%= item.score_value ?? '' %>"
+            >
             </td>
           </tr>
       <% }) %>
@@ -38,39 +40,8 @@
     id="generalNotes" 
     rows="4" 
     class="notes-input"
+    data-student-class-id="<%= studentClassId %>"
     placeholder="Write notes about this student here..."
-  ></textarea>
+  ><%= existingNote || '' %></textarea>
 </div>
-  <script>
-    document.querySelectorAll('.score-input').forEach(input => {
-      input.addEventListener('change', async (e) => {
-        const scoreId = e.target.getAttribute('data-id');
-        const itemId = e.target.getAttribute('data-item-id');
-        const newValue = e.target.value;
-
-        try {
-          const response = await fetch('/update-score', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              scoreId,
-              itemId,
-              newValue
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to update score');
-          }
-
-          alert('Score updated successfully');
-        } catch (error) {
-          console.error('Error updating score:', error);
-          alert('Error updating score');
-        }
-      });
-    });
-  </script>
 </table>
