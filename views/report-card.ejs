@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Kindergarten Report</title>
+
+  <style>
+    body {
+      font-family: "Comic Sans MS", "Arial Rounded MT Bold", sans-serif;
+      background: #fff8e6;
+      padding: 40px;
+      color: #444;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 32px;
+      color: #ff7f50;
+      margin-bottom: 10px;
+      text-shadow: 1px 1px #fff;
+    }
+
+    .profile-box {
+      background: #fff;
+      border: 3px solid #ffd28a;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px auto;
+      width: 90%;
+      font-size: 16px;
+    }
+
+    .profile-row {
+      margin-bottom: 6px;
+    }
+
+    .section-title {
+      font-size: 24px;
+      color: #4a90e2;
+      margin-top: 30px;
+      border-bottom: 3px dashed #4a90e2;
+      padding-bottom: 5px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th {
+      background: #ffdf91;
+      font-size: 18px;
+      padding: 12px;
+      text-align: center;
+      border-bottom: 2px solid #f0c36d;
+    }
+
+    td {
+      padding: 10px;
+      border-bottom: 1px dashed #eee;
+      font-size: 16px;
+    }
+
+    .category-row {
+      background: #fdeecf;
+      font-weight: bold;
+      color: #d76d00;
+    }
+
+    .stars {
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: #ffb400;
+    }
+
+    td.stars {
+      text-align: center;
+    }
+
+    .notes-box {
+      background: #fff;
+      border: 2px dashed #ffb347;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 10px;
+      min-height: 100px;
+      font-size: 16px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Bimba LittleStar Student Report</h1>
+
+  <!-- ⭐ STUDENT PROFILE -->
+  <div class="profile-box">
+    <div class="profile-row"><strong>Name:</strong> <%= student.name %></div>
+    <div class="profile-row"><strong>Age:</strong> <%= student.age %></div>
+    <div class="profile-row"><strong>Class:</strong> <%= classInfo.name %></div>
+    <div class="profile-row"><strong>Parent Contact:</strong> <%= student.contactname %> — <%= student.contactnumber %></div>
+  </div>
+
+  <h2 class="section-title">Scores</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Score</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <% Object.keys(categories).forEach(catName => { %>
+        <tr class="category-row">
+          <td colspan="2"><%= catName %></td>
+        </tr>
+
+        <% categories[catName].forEach(item => { 
+            const s = item.score ?? 0;
+            const stars = "★".repeat(s) + "☆".repeat(5 - s);
+        %>
+          <tr>
+            <td><%= item.subcategory %></td>
+            <td class="stars"><%= stars %></td>
+          </tr>
+        <% }) %>
+      <% }) %>
+
+    </tbody>
+  </table>
+
+  <h2 class="section-title">General Notes</h2>
+
+  <div class="notes-box">
+    <%= note || "No notes provided." %>
+  </div>
+
+</body>
+</html>

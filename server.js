@@ -3,6 +3,7 @@ import bodyParser from "body-parser";
 import { supabase, supabaseUser } from "./db.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import puppeteer from "puppeteer";
 
 dotenv.config();
 
@@ -595,7 +596,7 @@ app.get("/scores/:classId/student/:studentId", requireAuth, async (req, res) => 
   }
 });
 
-app.post("/save-score", async (req, res) => {
+app.post("/save-score", requireAuth, async (req, res) => {
   const { scoreId, itemId, studentClassId, score } = req.body;
 
   try {
@@ -641,5 +642,125 @@ app.post("/save-notes", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Error saving notes:", err);
     res.status(500).json({ error: "Failed to save notes" });
+  }
+});
+
+/*--------------------------------------
+EXPORT TO PDF
+----------------------------------------*/
+
+function renderView(app, view, data) {
+  return new Promise((resolve, reject) => {
+    app.render(view, data, (err, html) => {
+      if (err) reject(err);
+      else resolve(html);
+    });
+  });
+}
+app.get("/export-pdf/:studentClassId", async (req, res) => {
+  try {
+    const { studentClassId } = req.params;
+
+    // 1️⃣ Fetch student-class relationship + student info + class info
+    const { data: sc, error: scErr } = await supabase
+      .from("student_classes")
+      .select(`
+        id,
+        note,
+        student:student_id (
+          id,
+          name,
+          age,
+          contactname,
+          contactnumber
+        ),
+        class:class_id (
+          id,
+          name
+        )
+      `)
+      .eq("id", studentClassId)
+      .maybeSingle();
+
+    if (scErr || !sc) {
+      console.error(scErr);
+      return res.status(404).send("Student not found");
+    }
+
+    const classId = sc.class.id;
+
+    // 2️⃣ Fetch all grading items for this class (ordered)
+    const { data: gradingItems, error: itemErr } = await supabase
+      .from("gradingitems")
+      .select("id, category, subcategory, order_index")
+      .eq("class_id", classId)
+      .order("order_index", { ascending: true });
+
+    if (itemErr) {
+      console.error(itemErr);
+      return res.status(500).send("Failed to load grading items");
+    }
+
+    // 3️⃣ Fetch all scores for this student in this class
+    const { data: scores, error: scoreErr } = await supabase
+      .from("score")
+      .select("grading_item_id, score")
+      .eq("student_class_id", studentClassId);
+
+    if (scoreErr) {
+      console.error(scoreErr);
+      return res.status(500).send("Failed to load scores");
+    }
+
+    // 4️⃣ Merge items + scores into one structure
+    const merged = gradingItems.map(item => {
+      const foundScore = scores.find(s => s.grading_item_id === item.id);
+      return {
+        ...item,
+        score: foundScore?.score ?? null
+      };
+    });
+
+    const grouped = {};
+
+    merged.forEach(item => {
+      if (!grouped[item.category]) grouped[item.category] = [];
+      grouped[item.category].push(item);
+    });
+    // 5️⃣ Render EJS → HTML
+    const html = await renderView(req.app, "report-card", {
+      student: sc.student,
+      classInfo: sc.class,
+      categories: grouped,
+      note: sc.note ?? ""
+    });
+
+    // 6️⃣ Generate PDF through installed Chrome
+    const browser = await puppeteer.launch({
+      headless: "new",
+      executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    const pdf = await page.pdf({
+      format: "A4",
+      printBackground: true
+    });
+
+    await browser.close();
+
+    // 7️⃣ Send File
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename=${sc.student.name}-report.pdf`
+    });
+
+    res.send(pdf);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Failed to generate PDF");
   }
 });

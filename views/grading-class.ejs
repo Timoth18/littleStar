@@ -16,7 +16,6 @@
     .btn:hover { background: #4338ca; }
     .category-row { background: #e0e7ff; font-weight: bold; }
   </style>
-   <link rel="stylesheet" href="public/grading.css">
 </head>
 <body>
 <div class="layout">
@@ -50,39 +49,41 @@
       <div class="select-trigger" id="selectTrigger">
         -- choose --
       </div>
-
+      
       <div class="select-options" id="selectOptions">
         <% students.forEach(sc => { %>
           <div 
-            class="option"
-            data-value="<%= sc.student.id %>"
+          class="option"
+            data-studentclassid="<%= sc.id %>"        
+            data-studentid="<%= sc.student.id %>"     
             data-name="<%= sc.student.name %>"
             data-age="<%= sc.student.age %>"
             data-contactname="<%= sc.student.contactname %>"
             data-contactnumber="<%= sc.student.contactnumber %>"
-          >
+            >
             <%= sc.student.name %>
           </div>
-        <% }) %>
+          <% }) %>
+        </div>
       </div>
-    </div>
-    <input type="hidden" id="studentSelect" name="studentSelect" />
-
+      <input type="hidden" id="studentSelect" name="studentSelect" />
+      
       <!-- STUDENT INFO -->
       <div id="student-info" class="student-info hidden mb-4">
         <h2 id="s-name"></h2>
         <p id="s-age"></p>
         <p id="s-contactname"></p>
         <p id="s-contactnumber"></p>
+        <button id="downloadPdfBtn" class="pdf-button" >Download PDF</button>
       </div>
-
+      
       <hr class="divider hidden" id="divider">
-
+      
       <!-- SCORE TABLE -->
-        <div id="score-table-container"></div>
-        
-      </section>
-    </div>
+      <div id="score-table-container"></div>
+      
+    </section>
+  </div>
 </div>
 <script>
   const trigger = document.getElementById("selectTrigger");
@@ -114,18 +115,27 @@
   // --- WHEN USER SELECTS AN OPTION FROM THE CUSTOM DROPDOWN ---
   document.querySelectorAll(".option").forEach(opt => {
     opt.addEventListener("click", async () => {
-      const studentId = opt.dataset.value;
-
+      const studentClassId = opt.dataset.studentclassid;  
+      const studentId = opt.dataset.studentid;
+  
+  document.getElementById("downloadPdfBtn").addEventListener("click", () => {
+    const studentId = document.getElementById("studentSelect").value;
+    window.location.href = `/export-pdf/${studentClassId}`;
+  });
+    
+    
       // Update UI
       trigger.textContent = opt.textContent;
       hiddenInput.value = studentId;
+      hiddenInput.dataset.studentclassid = studentClassId; 
       options.style.display = "none";
-
+      
       // If empty, reset UI
       if (!studentId) {
         container.innerHTML = "";
         document.getElementById("student-info").classList.add("hidden");
         document.getElementById("divider").classList.add("hidden");
+        document.getElementById("downloadPdfBtn").classList.add("hidden");
         return;
       }
 
@@ -139,6 +149,8 @@
 
         document.getElementById("student-info").classList.remove("hidden");
         document.getElementById("divider").classList.remove("hidden");
+        document.getElementById("downloadPdfBtn").classList.remove("hidden");
+
 
         // Set name in info card
         document.getElementById("s-name").textContent = opt.textContent;
