@@ -3,7 +3,8 @@ import bodyParser from "body-parser";
 import { supabase, supabaseUser } from "./db.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import puppeteer from "puppeteer";
+import chromium from "@sparticuz/chromium";
+import puppeteer from "puppeteer-core";
 
 dotenv.config();
 
@@ -737,8 +738,10 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
 
     // 6️⃣ Generate PDF through installed Chrome
     const browser = await puppeteer.launch({
-      headless: "new",
-      executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
     });
 
     const page = await browser.newPage();
