@@ -3,8 +3,6 @@ import bodyParser from "body-parser";
 import { supabase, supabaseUser } from "./db.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import chromium from "@sparticuz/chromium";
-import puppeteer from "puppeteer-core";
 
 dotenv.config();
 
@@ -650,19 +648,18 @@ app.post("/save-notes", requireAuth, async (req, res) => {
 EXPORT TO PDF
 ----------------------------------------*/
 
-function renderView(app, view, data) {
-  return new Promise((resolve, reject) => {
-    app.render(view, data, (err, html) => {
-      if (err) reject(err);
-      else resolve(html);
-    });
-  });
-}
 app.get("/export-pdf/:studentClassId", async (req, res) => {
+  let browser;
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : `http://localhost:${port}`;
+
   try {
     const { studentClassId } = req.params;
 
-    // 1️⃣ Fetch student-class relationship + student info + class info
+    // ----------------------------------------
+    // 1️⃣ Fetch student + class
+    // ----------------------------------------
     const { data: sc, error: scErr } = await supabase
       .from("student_classes")
       .select(`
@@ -688,13 +685,13 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
       return res.status(404).send("Student not found");
     }
 
-    const classId = sc.class.id;
-
-    // 2️⃣ Fetch all grading items for this class (ordered)
+    // ----------------------------------------
+    // 2️⃣ Fetch grading items
+    // ----------------------------------------
     const { data: gradingItems, error: itemErr } = await supabase
       .from("gradingitems")
       .select("id, category, subcategory, order_index")
-      .eq("class_id", classId)
+      .eq("class_id", sc.class.id)
       .order("order_index", { ascending: true });
 
     if (itemErr) {
@@ -702,7 +699,9 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
       return res.status(500).send("Failed to load grading items");
     }
 
-    // 3️⃣ Fetch all scores for this student in this class
+    // ----------------------------------------
+    // 3️⃣ Fetch scores
+    // ----------------------------------------
     const { data: scores, error: scoreErr } = await supabase
       .from("score")
       .select("grading_item_id, score")
@@ -713,55 +712,88 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
       return res.status(500).send("Failed to load scores");
     }
 
-    // 4️⃣ Merge items + scores into one structure
-    const merged = gradingItems.map(item => {
-      const foundScore = scores.find(s => s.grading_item_id === item.id);
-      return {
-        ...item,
-        score: foundScore?.score ?? null
-      };
-    });
-
+    // ----------------------------------------
+    // 4️⃣ Merge item + score
+    // ----------------------------------------
     const grouped = {};
 
-    merged.forEach(item => {
+    for (const item of gradingItems) {
+      const found = scores.find(s => s.grading_item_id === item.id);
+
+      const merged = {
+        ...item,
+        score: found?.score ?? null
+      };
+
       if (!grouped[item.category]) grouped[item.category] = [];
-      grouped[item.category].push(item);
-    });
-    // 5️⃣ Render EJS → HTML
+      grouped[item.category].push(merged);
+    }
+
+    // ----------------------------------------
+    // 5️⃣ Render HTML (EJS → string)
+    // ----------------------------------------
     const html = await renderView(req.app, "report-card", {
       student: sc.student,
       classInfo: sc.class,
       categories: grouped,
-      note: sc.note ?? ""
+      note: sc.note ?? "",
+      baseurl
     });
 
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-    });
+    // ----------------------------------------
+    // 6️⃣ Launch Puppeteer (local or Vercel)
+    // ----------------------------------------
+    const isVercel = !!process.env.AWS_REGION;
 
+
+    if (isVercel) {
+      // VERCEL → puppeteer-core + chromium
+      const chromium = (await import("@sparticuz/chromium")).default;
+      const puppeteer = (await import("puppeteer-core")).default;
+
+      browser = await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+      });
+    } else {
+      // LOCAL → full puppeteer (bundled Chrome)
+      const puppeteer = (await import("puppeteer")).default;
+      browser = await puppeteer.launch({ headless: true });
+    }
+
+    // ----------------------------------------
+    // 7️⃣ Generate PDF
+    // ----------------------------------------
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
 
-    const pdf = await page.pdf({
+    const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true
     });
 
     await browser.close();
 
+    // ----------------------------------------
+    // 8️⃣ Send PDF
+    // ----------------------------------------
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=${sc.student.name}-report.pdf`
     });
 
-    res.send(pdf);
+    res.send(pdfBuffer);
 
   } catch (err) {
     console.error(err);
+
+    if (browser) {
+      try { await browser.close(); } catch (e) {}
+    }
+
     res.status(500).send("Failed to generate PDF");
   }
 });
+
