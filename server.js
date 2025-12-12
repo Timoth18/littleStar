@@ -736,7 +736,6 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
       note: sc.note ?? ""
     });
 
-    // 6️⃣ Generate PDF through installed Chrome
     const browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
@@ -754,7 +753,6 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
 
     await browser.close();
 
-    // 7️⃣ Send File
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=${sc.student.name}-report.pdf`
