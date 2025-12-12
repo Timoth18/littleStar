@@ -3,6 +3,8 @@ import bodyParser from "body-parser";
 import { supabase, supabaseUser } from "./db.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import fs from "fs";
+import path from "path";
 
 dotenv.config();
 
@@ -647,12 +649,19 @@ app.post("/save-notes", requireAuth, async (req, res) => {
 /*--------------------------------------
 EXPORT TO PDF
 ----------------------------------------*/
-
+function renderView(app, view, data) {
+  return new Promise((resolve, reject) => {
+    app.render(view, data, (err, html) => {
+      if (err) reject(err);
+      else resolve(html);
+    });
+  });
+}
 app.get("/export-pdf/:studentClassId", async (req, res) => {
   let browser;
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : `http://localhost:${port}`;
+
+  const logoPath = path.join(process.cwd(), "public", "image", "logo.jpg");
+  const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
 
   try {
     const { studentClassId } = req.params;
@@ -737,7 +746,7 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
       classInfo: sc.class,
       categories: grouped,
       note: sc.note ?? "",
-      baseurl
+      logoBase64
     });
 
     // ----------------------------------------
