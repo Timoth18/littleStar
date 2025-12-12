@@ -123,21 +123,22 @@
 
         <% categories[catName].forEach(item => { 
             const s = item.score ?? 0;
-              const maxStars = 5;
+            const stars = "&#9733;".repeat(s) + "&#9734;".repeat(5 - s);
         %>
           <tr>
+            <td><%= item.subcategory %></td>
               <td class="stars">
-            <% for(let i = 0; i < s; i++) { %>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffb400" xmlns="http://www.w3.org/2000/svg">
-                <polygon points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
-              </svg>
-            <% } %>
-            <% for(let i = s; i < maxStars; i++) { %>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="#eee" xmlns="http://www.w3.org/2000/svg">
-                <polygon points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
-              </svg>
-            <% } %>
-          </td>
+              <% for(let i = 0; i < s; i++) { %>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffb400" xmlns="http://www.w3.org/2000/svg">
+                  <polygon points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
+                </svg>
+              <% } %>
+              <% for(let i = s; i < maxStars; i++) { %>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#eee" xmlns="http://www.w3.org/2000/svg">
+                  <polygon points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
+                </svg>
+              <% } %>
+            </td>
           </tr>
         <% }) %>
       <% }) %>
