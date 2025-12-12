@@ -123,7 +123,7 @@
 
         <% categories[catName].forEach(item => { 
             const s = item.score ?? 0;
-            const stars =  "&amp;starf;".repeat(s) + "&amp;starf;".repeat(5 - s);
+            const stars = "&#9733;".repeat(s) + "&#9734;".repeat(5 - s);
         %>
           <tr>
             <td><%= item.subcategory %></td>
