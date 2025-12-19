@@ -660,7 +660,7 @@ function renderView(app, view, data) {
 app.get("/export-pdf/:studentClassId", async (req, res) => {
   let browser;
 
-  const logoPath = path.join(process.cwd(), "public", "image", "logo.jpg");
+  const logoPath = path.join(process.cwd(), "public", "image", "logo.png");
   const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
 
   try {
@@ -679,7 +679,8 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
           name,
           age,
           contactname,
-          contactnumber
+          contactnumber,
+          createdate
         ),
         class:class_id (
           id,
