@@ -777,7 +777,8 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
     // 7️⃣ Generate PDF
     // ----------------------------------------
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
+    await page.setContent(html, { waitUntil: "networkidle0" })
+    await page.evaluateHandle('document.fonts.ready');
 
     const pdfBuffer = await page.pdf({
       format: "A4",
