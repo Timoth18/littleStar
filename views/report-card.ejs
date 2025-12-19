@@ -5,8 +5,35 @@
   <title>Kindergarten Report</title>
 
   <style>
+  @font-face {
+    font-family: 'ComicSans';
+    src: url('/fonts/ComicSans-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: 'ComicSans';
+    src: url('/fonts/ComicSans-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: 'ComicSans';
+    src: url('/fonts/ComicSans-Italic.ttf') format('truetype');
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  @font-face {
+    font-family: 'ComicSans';
+    src: url('/fonts/ComicSans-BoldItalic.ttf') format('truetype');
+    font-weight: 700;
+    font-style: italic;
+  }
     body {
-      font-family: "Comic Sans MS", "Arial Rounded MT Bold", sans-serif;
+      font-family: "Comic Sans", "Arial Rounded MT Bold", sans-serif;
       background: #fff8e6;
       padding: 40px;
       color: #444;
@@ -147,7 +174,7 @@
 
       <% Object.keys(categories).forEach(catName => { %>
         <tr class="category-row">
-          <td colspan="2"><%= catName %></td>
+          <td colspan="2"><%= catName.toUpperCase() %></td>
         </tr>
 
         <% categories[catName].forEach(item => { 
