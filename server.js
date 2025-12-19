@@ -662,6 +662,25 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
 
   const logoPath = path.join(process.cwd(), "public", "image", "logo.png");
   const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
+    const fontRegular = fs.readFileSync(
+      path.join(process.cwd(), "public", "fonts", "ComicSans-Regular.ttf"),
+      "base64"
+    );
+
+    const fontBold = fs.readFileSync(
+      path.join(process.cwd(), "public", "fonts", "ComicSans-Bold.ttf"),
+      "base64"
+    );
+
+    const fontItalic = fs.readFileSync(
+      path.join(process.cwd(), "public", "fonts", "ComicSans-Italic.ttf"),
+      "base64"
+    );
+
+    const fontBoldItalic = fs.readFileSync(
+      path.join(process.cwd(), "public", "fonts", "ComicSans-BoldItalic.ttf"),
+      "base64"
+    );
 
   try {
     const { studentClassId } = req.params;
@@ -747,7 +766,11 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
       classInfo: sc.class,
       categories: grouped,
       note: sc.note ?? "",
-      logoBase64
+      logoBase64,
+      fontRegular,
+      fontBold,
+      fontItalic,
+      fontBoldItalic
     });
 
     // ----------------------------------------

@@ -5,33 +5,34 @@
   <title>Kindergarten Report</title>
 
   <style>
-  @font-face {
-    font-family: 'ComicSans';
-    src: url('/fonts/ComicSans-Regular.ttf') format('truetype');
-    font-weight: 400;
-    font-style: normal;
-  }
+@font-face {
+  font-family: 'ComicSans';
+  src: url("data:font/truetype;base64,<%- fontRegular %>") format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
 
-  @font-face {
-    font-family: 'ComicSans';
-    src: url('/fonts/ComicSans-Bold.ttf') format('truetype');
-    font-weight: 700;
-    font-style: normal;
-  }
+@font-face {
+  font-family: 'ComicSans';
+  src: url("data:font/truetype;base64,<%- fontBold %>") format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
 
-  @font-face {
-    font-family: 'ComicSans';
-    src: url('/fonts/ComicSans-Italic.ttf') format('truetype');
-    font-weight: 400;
-    font-style: italic;
-  }
+@font-face {
+  font-family: 'ComicSans';
+  src: url("data:font/truetype;base64,<%- fontItalic %>") format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
 
-  @font-face {
-    font-family: 'ComicSans';
-    src: url('/fonts/ComicSans-BoldItalic.ttf') format('truetype');
-    font-weight: 700;
-    font-style: italic;
-  }
+@font-face {
+  font-family: 'ComicSans';
+  src: url("data:font/truetype;base64,<%- fontBoldItalic %>") format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+
     body {
       font-family: "ComicSans", "Arial Rounded MT Bold", sans-serif;
       background: #fff8e6;
