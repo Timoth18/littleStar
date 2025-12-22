@@ -534,6 +534,7 @@
 .back-button{
   background: #1e1e2f;
   width: fit-content;
+  height: fit-content;
   align-items: left;
   color: white;
   padding: 10px;
