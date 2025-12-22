@@ -5,33 +5,33 @@
   <title>Kindergarten Report</title>
 
   <style>
-@font-face {
-  font-family: 'ComicSans';
-  src: url("data:font/truetype;base64,<%- fontRegular %>") format('truetype');
-  font-weight: 400;
-  font-style: normal;
-}
+    @font-face {
+      font-family: 'ComicSans';
+      src: url("data:font/truetype;base64,<%- fontRegular %>") format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
 
-@font-face {
-  font-family: 'ComicSans';
-  src: url("data:font/truetype;base64,<%- fontBold %>") format('truetype');
-  font-weight: 700;
-  font-style: normal;
-}
+    @font-face {
+      font-family: 'ComicSans';
+      src: url("data:font/truetype;base64,<%- fontBold %>") format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
 
-@font-face {
-  font-family: 'ComicSans';
-  src: url("data:font/truetype;base64,<%- fontItalic %>") format('truetype');
-  font-weight: 400;
-  font-style: italic;
-}
+    @font-face {
+      font-family: 'ComicSans';
+      src: url("data:font/truetype;base64,<%- fontItalic %>") format('truetype');
+      font-weight: 400;
+      font-style: italic;
+    }
 
-@font-face {
-  font-family: 'ComicSans';
-  src: url("data:font/truetype;base64,<%- fontBoldItalic %>") format('truetype');
-  font-weight: 700;
-  font-style: italic;
-}
+    @font-face {
+      font-family: 'ComicSans';
+      src: url("data:font/truetype;base64,<%- fontBoldItalic %>") format('truetype');
+      font-weight: 700;
+      font-style: italic;
+    }
 
     body {
       font-family: "ComicSans", "Arial Rounded MT Bold", sans-serif;
@@ -58,7 +58,7 @@
       width: 90%;
       font-size: 16px;
     }
-
+    
     .profile-row {
       margin-bottom: 6px;
     }
@@ -81,7 +81,7 @@
     }
 
     th {
-      background: #dbbcf5;
+      background: #ffdf91;
       font-size: 18px;
       padding: 12px;
       text-align: center;
@@ -175,7 +175,7 @@
 
       <% Object.keys(categories).forEach(catName => { %>
         <tr class="category-row">
-          <td colspan="2"><%= catName.toUpperCase() %></td>
+         <td colspan="2"><%= catName.charAt(0).toUpperCase() + catName.slice(1) %></td>
         </tr>
 
         <% categories[catName].forEach(item => { 
@@ -199,6 +199,7 @@
           </tr>
         <% }) %>
       <% }) %>
+
     </tbody>
   </table>
   <div class="notes-wrapper">
@@ -209,12 +210,13 @@
       </div>
     </div>
   </div>
-  <div class = "Scale">
-    ⭐ Assessment Scale
-1 = Requires Intensive Support
-2 = Needs Stimulation
-3 = Beginning to Develop
-4 = Developing Well
-5 = Developing Very Well </div>
+  <div class="profile-box">
+    <h1 class="description">⭐ Skala Penilaian :</h1>
+    <div class="profile-row">1 = Perlu Pendampingan Intensif</div>
+    <div class="profile-row">2 = Perlu Stimulasi</div>
+    <div class="profile-row">3 = Mulai Berkembang</div>
+    <div class="profile-row">4 = Berkembang Baik</div>
+    <div class="profile-row">5 = Berkembang Sangat Baik</div>
+  </div>
 </body>
 </html>
