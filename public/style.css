@@ -53,6 +53,7 @@
 
 /* HEADER */
 .header {
+  display : flex;
   background: white;
   padding: 20px;
   border-bottom: 1px solid #ccc;
@@ -532,7 +533,7 @@
   width: fit-content;
   align-items: left;
   color: white;
-  padding: 10px 16px;
+  padding: 10px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
