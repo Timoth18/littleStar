@@ -526,3 +526,14 @@
 #score-table-container {
   padding-bottom: 20px;  
 }
+
+.back-button{
+  background: #1e1e2f;
+  width: fit-content;
+  align-items: left;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
