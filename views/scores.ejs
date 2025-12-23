@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LittleStar | Home</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <h2 class="logo">LittleStar</h2>
+      <ul>
+        <li><a href="/home">Dashboard</a></li>
+        <li><a href="/views">Students</a></li>
+        <li><a class ="active" href="/scores">Scores</a></li>
+        <li><a href="/reports">Reports</a></li>
+        <li><a href="/manage-roles">Settings</a></li>
+      </ul>
+    </nav>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="main">
+      
+      <!-- HEADER -->
+      <header class="header">
+        <h1>Scores</h1>
+      </header>
+
+      <!-- CONTENT AREA -->
+<section class="content scores-page">
+  <div class="section-header"
+  <h2 class="section-title">Select a Student</h2>
+  </div>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search students..." />
+  </div>
+        <% if (students.length === 0) { %>
+          <div class="empty-box">
+            <p>No students found.</p>
+            <a href="/views/add" class="btn">Add Student</a>
+          </div>
+        <% } else { %>
+          <div class="students-list">
+            <% students.forEach(student => { %>
+              <a class="student-card" href="/scores/<%= student.id %>">
+                <div class="student-header">
+                  <h3><%= student.name %></h3> 
+                  <span 
+                  class="status-chip <%= (student.status || 'Active').toLowerCase() %>" 
+                  data-id="<%= student.id %>"
+                  data-status="<%= student.status %>"
+                  >
+                </div>
+                
+                <p>Class: <%= student.class %></p>
+                  <%= student.status || 'Active' %>
+                </span>
+              </a>
+            <% }) %>
+          </div>
+        <% } %>
+
+</section>
+
+    </div>
+  </div>
+
+</body>
+</html>

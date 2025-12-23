@@ -173,24 +173,45 @@
     alt="Logo"
     style="height: 140px; margin-right: 10px;"
     />
+    <% if (classInfo.name === 'English') { %>
     <h1>Bimba LittleStar Student Report</h1>
+    <% else { %>
+    <h1>Laporan Perkembangan Siswa Bimba LittleStar</h1>
+    <% } %>
   </div>
   
-  <!-- STUDENT PROFILE -->
+   <% if (classInfo.name === 'English') { %>
   <div class="profile-box">
     <div class="profile-row"><strong>Name:</strong> <%= student.name %></div>
     <div class="profile-row"><strong>Age:</strong> <%= student.age %></div>
     <div class="profile-row"><strong>Class:</strong> <%= classInfo.name %></div>
     <div class="profile-row"><strong>Parent Contact:</strong> <%= student.contactname %> — <%= student.contactnumber %></div>
   </div>
+    <% else { %>
+  <div class="profile-box">
+    <div class="profile-row"><strong>Nama:</strong> <%= student.name %></div>
+    <div class="profile-row"><strong>Usia:</strong> <%= student.age %></div>
+    <div class="profile-row"><strong>Kelas:</strong> <%= classInfo.name %></div>
+    <div class="profile-row"><strong>Kontak Orang Tua:</strong> <%= student.contactname %> — <%= student.contactnumber %></div>
+  </div>
+    <% } %>
 
+ <% if (classInfo.name === 'English') { %>
   <h2 class="section-title">Scores</h2>
+    <% } else { %>
+   <h2 class="section-title">Scores</h2> 
+   <% } %>  
 
   <table>
     <thead>
       <tr>
+        <% if (classInfo.name === 'English') { %>
         <th>Category</th>
         <th>Score</th>
+        <% else { %>
+        <th>Kategori</th>
+        <th>Penilaian</th>
+          <% } %>
       </tr>
     </thead>
     <tbody>
@@ -224,13 +245,24 @@
 
     </tbody>
   </table>
+<% if (classInfo.name === 'English') { %>
   <div class="notes-wrapper">
     <div class="notes avoid-break">
-      <h2 class="section-title avoid-break">General Notes</h2>  
+        <h2 class="section-title avoid-break">General Notes</h2>    
       <div class="notes-box avoid-break"><%= note || "No notes provided." %>
       </div>
     </div>
   </div>
+
+    <% } else { %>
+  <div class="notes-wrapper">
+    <div class="notes avoid-break">
+      <h2 class="section-title avoid-break">Catatan Umum</h2>    
+      <div class="notes-box avoid-break"><%= note || "No notes provided." %>
+      </div>
+    </div>
+  </div>
+    <% } %>
 
   <div class="keterangan-box avoid-break">
      <% if (classInfo.name === 'English') { %>
