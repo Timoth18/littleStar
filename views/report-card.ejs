@@ -141,6 +141,7 @@
       min-height: 100px;
       font-size: 16px;
       white-space: pre-wrap;
+      text-indent: 0;
     }
     
     .header {
@@ -226,8 +227,7 @@
   <div class="notes-wrapper">
     <div class="notes avoid-break">
       <h2 class="section-title avoid-break">General Notes</h2>  
-      <div class="notes-box avoid-break">
-        <%= note || "No notes provided." %>
+      <div class="notes-box avoid-break"><%= note || "No notes provided." %>
       </div>
     </div>
   </div>
