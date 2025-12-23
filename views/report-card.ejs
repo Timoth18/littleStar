@@ -173,22 +173,18 @@
     alt="Logo"
     style="height: 140px; margin-right: 10px;"
     />
-    <% if (classInfo.name === 'English') { %>
-    <h1>Bimba LittleStar Student Report</h1>
-    <% else { %>
-    <h1>Laporan Perkembangan Siswa Bimba LittleStar</h1>
+    <% if (classInfo.name === 'English') { %> <h1>Bimba LittleStar Student Report</h1>
+    <% else { %><h1>Laporan Perkembangan Siswa Bimba LittleStar</h1>
     <% } %>
   </div>
   <!-- STUDENT PROFILE BOX --> 
-   <% if (classInfo.name === 'English') { %>
-  <div class="profile-box">
+   <% if (classInfo.name === 'English') { %> <div class="profile-box">
     <div class="profile-row"><strong>Name:</strong> <%= student.name %></div>
     <div class="profile-row"><strong>Age:</strong> <%= student.age %></div>
     <div class="profile-row"><strong>Class:</strong> <%= classInfo.name %></div>
     <div class="profile-row"><strong>Parent Contact:</strong> <%= student.contactname %> — <%= student.contactnumber %></div>
   </div>
-    <% } else { %>
-  <div class="profile-box">
+    <% } else { %> <div class="profile-box">
     <div class="profile-row"><strong>Nama:</strong> <%= student.name %></div>
     <div class="profile-row"><strong>Usia:</strong> <%= student.age %></div>
     <div class="profile-row"><strong>Kelas:</strong> <%= classInfo.name %></div>
@@ -196,22 +192,52 @@
   </div>
     <% } %>
 
- <% if (classInfo.name === 'English') { %>
-  <h2 class="section-title">Scores</h2>
-    <% } else { %>
-   <h2 class="section-title">Scores</h2> 
+ <% if (classInfo.name === 'English') { %><h2 class="section-title">Scores</h2>
+    <% } else { %><h2 class="section-title">Nilai</h2> 
    <% } %>  
-
+   
+   <% if (classInfo.name === 'English') { %>
   <table>
     <thead>
       <tr>
-        <% if (classInfo.name === 'English') { %>
-        <th>Category</th>
-        <th>Score</th>
-        <% else { %>
         <th>Kategori</th>
         <th>Penilaian</th>
-          <% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% Object.keys(categories).forEach(catName => { %>
+        <tr class="category-row">
+         <td colspan="2"><%= catName.charAt(0).toUpperCase() + catName.slice(1) %></td>
+        </tr>
+
+        <% categories[catName].forEach(item => { 
+            const s = item.score ?? 0;
+            const maxStars = 5;
+        %>
+          <tr>
+            <td><%= item.subcategory %></td>
+              <td class="stars">
+              <% for(let i = 0; i < s; i++) { %>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffb400" xmlns="http://www.w3.org/2000/svg">
+                  <polygon points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
+                </svg>
+              <% } %>
+              <% for(let i = s; i < maxStars; i++) { %>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#eee" xmlns="http://www.w3.org/2000/svg">
+                  <polygon points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
+                </svg>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      <% }) %>
+
+<% else { %>
+  <table>
+    <thead>
+      <tr>
+        <th>Kategori</th>
+        <th>Penilaian</th>
       </tr>
     </thead>
     <tbody>
@@ -242,6 +268,7 @@
           </tr>
         <% }) %>
       <% }) %>
+    <% } %>
 
     </tbody>
   </table>
