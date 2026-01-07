@@ -352,6 +352,9 @@ app.post("/edit-student/:id", requireAuth, async (req, res) => {
   const studentId = req.params.id;
   const { name, age, parent_name, contact, class_id } = req.body;
 
+  /* ======================
+     1. UPDATE STUDENT INFO
+     ====================== */
   const { error: studentErr } = await supabaseClient
     .from("student")
     .update({
@@ -367,24 +370,56 @@ app.post("/edit-student/:id", requireAuth, async (req, res) => {
     return res.status(500).send("Failed to update student");
   }
 
+  /* ======================
+     2. PARSE INCOMING CLASSES
+     ====================== */
   const classIds = class_id
-    ? class_id.split(",").map((id) => id.trim()).filter(Boolean)
+    ? class_id.split(",").map(id => id.trim()).filter(Boolean)
     : [];
 
-  // delete old links (service role)
-  const { error: deleteErr } = await supabase
+  /* ======================
+     3. FETCH EXISTING CLASSES
+     ====================== */
+  const { data: existing, error: fetchErr } = await supabase
     .from("student_classes")
-    .delete()
+    .select("id, class_id")
     .eq("student_id", studentId);
 
-  if (deleteErr) {
-    console.error("Failed to delete old student_classes:", deleteErr);
-    return res.status(500).send("Failed to update classes");
+  if (fetchErr) {
+    console.error(fetchErr);
+    return res.status(500).send("Failed to fetch student classes");
   }
 
-  // insert new links and prepopulate
-  if (classIds.length > 0) {
-    const rows = classIds.map((cid) => ({
+  const existingClassIds = existing.map(e => e.class_id);
+
+  /* ======================
+     4. DIFF (DELETE / INSERT)
+     ====================== */
+  const toDelete = existing.filter(e => !classIds.includes(e.class_id));
+  const toInsert = classIds.filter(cid => !existingClassIds.includes(cid));
+
+  /* ======================
+     5. DELETE REMOVED CLASSES
+     ====================== */
+  if (toDelete.length > 0) {
+    const ids = toDelete.map(e => e.id);
+
+    const { error: deleteErr } = await supabase
+      .from("student_classes")
+      .delete()
+      .in("id", ids);
+
+    if (deleteErr) {
+      console.error("Failed to delete student_classes:", deleteErr);
+      return res.status(500).send("Failed to remove classes");
+    }
+  }
+
+  /* ======================
+     6. INSERT NEW CLASSES
+     ====================== */
+  if (toInsert.length > 0) {
+    const rows = toInsert.map(cid => ({
       student_id: studentId,
       class_id: cid,
     }));
@@ -395,20 +430,19 @@ app.post("/edit-student/:id", requireAuth, async (req, res) => {
       .select();
 
     if (insertErr) {
-      console.error("Failed to insert new student_classes:", insertErr);
-      return res.status(500).send("Failed to update classes");
+      console.error("Failed to insert student_classes:", insertErr);
+      return res.status(500).send("Failed to add classes");
     }
 
-    console.log("[/edit-student] inserted student_classes:", inserted);
-
+    // Prepopulate scores ONLY for new classes
     for (const sc of inserted) {
-      console.log("[/edit-student] prepopulating for student_class:", sc.id, "class:", sc.class_id);
       await ensureScoresForStudentClass(supabase, sc.id, sc.class_id);
     }
-  } else {
-    // nothing to insert — no classes assigned
   }
 
+  /* ======================
+     7. DONE
+     ====================== */
   res.redirect("/views");
 });
 
