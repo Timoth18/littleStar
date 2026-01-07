@@ -173,9 +173,11 @@
     alt="Logo"
     style="height: 140px; margin-right: 10px;"
     />
-    <% if (classInfo.name === 'English') { %> <h1>Bimba LittleStar Student Report</h1>
-    <% else { %><h1>Laporan Perkembangan Siswa Bimba LittleStar</h1>
-    <% } %>
+<% if (classInfo.name === 'English') { %>
+  <h1>Bimba LittleStar Student Report</h1>
+<% } else { %>
+  <h1>Laporan Perkembangan Siswa Bimba LittleStar</h1>
+<% } %>
   </div>
   <!-- STUDENT PROFILE BOX --> 
    <% if (classInfo.name === 'English') { %> <div class="profile-box">
