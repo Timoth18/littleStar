@@ -75,9 +75,12 @@
       border: 2px dashed #ffb347;
       border-radius: 12px;
       padding: 20px;
-      margin-top: 20px;
+      margin-top: 30px;
       width: fit-content;
       font-size: 16px;
+      margin-top : 20px;
+      page-break-before: always;
+      break-before: page;
     }
 
     .profile-row {
@@ -138,10 +141,11 @@
       padding-right: 20px;
       border-radius: 10px;
       vertical-align: top;
-      min-height: 100px;
+      min-height: 30px;
       font-size: 16px;
       white-space: pre-wrap;
-      text-indent: 0;
+      text-indent: 0px;
+      height: fit-content;
     }
     
     .header {
@@ -152,7 +156,6 @@
     .avoid-break {
       page-break-inside: avoid;
       break-inside: avoid;
-      margin-top : 30px;
     }
 
     .notes-wrapper{
@@ -237,19 +240,19 @@
   </table>
 
 <% if (classInfo.name === 'English') { %>
-  <div class="notes-wrapper">
-    <div class="notes avoid-break">
-        <h2 class="section-title avoid-break">General Notes</h2>    
-      <div class="notes-box avoid-break"><%= note || "No notes provided." %>
+  <div class="notes-wrapper avoid-break">
+    <div class="notes">
+        <h2 class="section-title">General Notes</h2>    
+      <div class="notes-box"><%= note || "No notes provided." %>
       </div>
     </div>
   </div>
 
     <% } else { %>
-  <div class="notes-wrapper">
-    <div class="notes avoid-break">
-      <h2 class="section-title avoid-break">Catatan Umum</h2>    
-      <div class="notes-box avoid-break"><%= note || "No notes provided." %>
+  <div class="notes-wrapper avoid-break">
+    <div class="notes">
+      <h2 class="section-title">Catatan Umum</h2>    
+      <div class="notes-box"><%= note || "No notes provided." %>
       </div>
     </div>
   </div>
