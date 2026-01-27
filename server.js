@@ -12,7 +12,6 @@ const app = express();
 const port = 3000;
 
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.static("public"));
 app.use(express.json());
 app.use(cookieParser());
 app.set("view engine", "ejs");
@@ -152,7 +151,8 @@ app.get("/views", requireAuth, async (req, res) => {
       student_classes (
         classes ( id, name, order_index )
       )`
-    );
+    )
+    .is("deleted_at", null);
 
   if (error) {
     console.error("Supabase query error:", error);
@@ -226,6 +226,7 @@ app.post("/submit", requireAuth, async (req, res) => {
       contactnumber: contact,
     })
     .select()
+    .is("deleted_at", null)
     .single();
 
   if (studentErr) {
@@ -286,6 +287,7 @@ app.get("/search-students", requireAuth, async (req, res) => {
       )`
     )
     .or(`name.ilike.%${q}%`)
+    .is("deleted_at", null)
     .order("id", { ascending: false });
 
   if (!error && q) {
@@ -326,6 +328,7 @@ app.get("/edit-student/:id", requireAuth, async (req, res) => {
         classes ( id, name, order_index )
       )`
     )
+    .is("deleted_at", null)
     .eq("id", studentId)
     .single();
 
@@ -511,21 +514,26 @@ app.get("/scores/:classId", requireAuth, async (req, res) => {
     if (classErr) throw classErr;
     
     // get students for class
-   const { data: students, error: studErr } = await client
-      .from("student_classes")
-      .select(`
+  const { data: students, error } = await client
+    .from("student_classes")
+    .select(`
+      id,
+      student:student_id!inner (
         id,
-        student:student_id (
-          id,
-          name,
-          age,
-          contactname,
-          contactnumber
-        )
-      `)
-      .eq("class_id", classId);
-
-    if (studErr) throw studErr;
+        name,
+        age,
+        contactname,
+        contactnumber,
+        deleted_at
+      )
+    `)
+    .eq("class_id", classId)
+    .is("student.deleted_at", null);
+    
+  if (error) {
+    console.error(error);
+    return res.status(500).send(error.message);
+  }
 
     // Sort students by name
     students.sort((a, b) => a.student.name.localeCompare(b.student.name));
@@ -740,6 +748,7 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
           name
         )
       `)
+      .is(deleted_at, null)
       .eq("id", studentClassId)
       .maybeSingle();
 
@@ -865,3 +874,22 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
   }
 });
 
+app.post("/students/:id/delete", requireAuth, async (req, res) => {
+  const token = req.cookies["supabase-auth-token"];
+  const supabaseClient = supabaseUser(token);
+
+  const { id } = req.params;
+
+  const { error } = await supabaseClient
+    .from("student")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("deleted_at", null);
+
+  if (error) {
+    return res.status(400).send(error.message);
+  }
+  res.redirect("/views");
+});
+
+app.use(express.static("public"));

@@ -32,9 +32,13 @@
       <div class="dropdown-content">
         <a href="/edit-student/<%= student.id %>">Edit</a>
         <a href="/add-score/<%= student.id %>">Add Score</a>
-        <form action="/delete-student/<%= student.id %>" method="POST" style="margin:0;">
-          <button type="submit" class="delete-btn">Delete</button>
-        </form>
+         <form
+            method="POST"
+            action="/students/<%= student.id %>/delete"
+            onsubmit="return confirm('Delete this student?')"
+          >
+            <button type="submit">Delete</button>
+          </form>
       </div>
     </div>
   </td>
