@@ -748,7 +748,7 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
           name
         )
       `)
-      .is(deleted_at, null)
+      .is("deleted_at", null)
       .eq("id", studentClassId)
       .maybeSingle();
 
