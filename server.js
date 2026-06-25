@@ -812,7 +812,9 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
       fontRegular,
       fontBold,
       fontItalic,
-      fontBoldItalic
+      fontBoldItalic,
+      exportDateEN: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }),
+      exportDateID: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
     });
 
     // ----------------------------------------
