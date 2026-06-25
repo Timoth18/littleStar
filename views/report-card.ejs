@@ -103,6 +103,11 @@
       padding-bottom: 5px;
     }
 
+    .table-and-keterangan {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -213,6 +218,7 @@
     <% } else { %><h2 class="section-title">Nilai</h2> 
    <% } %>  
    
+ <div class="table-and-keterangan">
   <table>
     <thead>
       <tr>
@@ -250,28 +256,30 @@
     </tbody>
   </table>
 
-    <div class="keterangan-box avoid-break">
-     <% if (classInfo.name === 'English') { %>
+  <div class="keterangan-box avoid-break">
+    <% if (classInfo.name === 'English') { %>
     <h2 class="description">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffb400" xmlns="http://www.w3.org/2000/svg">
         <polygon points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
-          </svg> Assessment Scale :</h2>
+      </svg> Assessment Scale :</h2>
     <div class="profile-row">1 = Needs Intensive Support</div>
     <div class="profile-row">2 = Needs Stimulation</div>
     <div class="profile-row">3 = Beginning to Develop</div>
     <div class="profile-row">4 = Developing Well</div>
     <div class="profile-row">5 = Developing Very Well</div>
-  <% } else { %> <h2 class="description">
+    <% } else { %>
+    <h2 class="description">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffb400" xmlns="http://www.w3.org/2000/svg">
         <polygon points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
-          </svg> Skala Penilaian :</h2>
+      </svg> Skala Penilaian :</h2>
     <div class="profile-row">1 = Perlu Pendampingan Intensif</div>
     <div class="profile-row">2 = Perlu Stimulasi</div>
     <div class="profile-row">3 = Mulai Berkembang</div>
     <div class="profile-row">4 = Berkembang Baik</div>
     <div class="profile-row">5 = Berkembang Sangat Baik</div>
-  <% } %>
+    <% } %>
   </div>
+</div>
 
 <% if (classInfo.name === 'English') { %>
   <div class="notes-wrapper avoid-break">
