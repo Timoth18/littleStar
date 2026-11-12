@@ -165,7 +165,16 @@
     
     .header {
       display: flex;
-      align-items: center;                  
+      align-items: center;
+    }
+
+    /* title and date stack vertically, beside the logo */
+    .header-text {
+      flex: 1;
+    }
+
+    .header-text h1 {
+      margin-bottom: 4px;
     }
 
     .avoid-break {
@@ -192,13 +201,15 @@
     alt="Logo"
     style="height: 140px; margin-right: 10px;"
     />
+    <div class="header-text">
 <% if (classInfo.name === 'English') { %>
-  <h1>Bimba LittleStar Student Report</h1>
-  <p>Report Issued: <%= exportDateEN %></p>
+      <h1>Bimba LittleStar Student Report</h1>
+      <p>Report Issued: <%= exportDateEN %></p>
 <% } else { %>
-  <h1>Laporan Perkembangan Anak Bimba LittleStar</h1> 
-  <p><%= exportDateID %></p>
+      <h1>Laporan Perkembangan Anak Bimba LittleStar</h1>
+      <p><%= exportDateID %></p>
 <% } %>
+    </div>
   </div>
   <!-- STUDENT PROFILE BOX --> 
    <% if (classInfo.name === 'English') { %> <div class="profile-box">
