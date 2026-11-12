@@ -1,6 +1,5 @@
 import express from "express";
-import bodyParser from "body-parser";
-import { supabase, supabaseUser } from "./db.js";
+import { supabase, supabaseUser, supabaseAuth } from "./db.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import fs from "fs";
@@ -11,10 +10,33 @@ dotenv.config();
 const app = express();
 const port = 3000;
 
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.static("public"));
+app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
 app.set("view engine", "ejs");
+
+const ACCESS_COOKIE = "supabase-auth-token";
+const REFRESH_COOKIE = "supabase-refresh-token";
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: "lax", // browsers won't send the cookie on cross-site POSTs
+  secure: process.env.NODE_ENV === "production" || !!process.env.VERCEL,
+  path: "/",
+};
+
+function setSessionCookies(res, session) {
+  res.cookie(ACCESS_COOKIE, session.access_token, cookieOptions);
+  res.cookie(REFRESH_COOKIE, session.refresh_token, {
+    ...cookieOptions,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  });
+}
+
+function clearSessionCookies(res) {
+  res.clearCookie(ACCESS_COOKIE, cookieOptions);
+  res.clearCookie(REFRESH_COOKIE, cookieOptions);
+}
 
 
 /* ------------------------------
@@ -93,15 +115,39 @@ async function ensureScoresForStudentClass(client, studentClassId, classId) {
 /* ------------------------------
 Middleware: Require Auth
 ------------------------------ */
-function requireAuth(req, res, next) {
-  const token = req.cookies["supabase-auth-token"];
-  if (!token) return res.redirect("/login");
+async function requireAuth(req, res, next) {
+  try {
+    const token = req.cookies[ACCESS_COOKIE];
+    const refreshToken = req.cookies[REFRESH_COOKIE];
 
-  supabase.auth.getUser(token).then(({ data: { user }, error }) => {
-    if (error || !user) return res.redirect("/login");
-    req.user = user;
-    next();
-  });
+    if (token) {
+      const { data, error } = await supabase.auth.getUser(token);
+      if (!error && data?.user) {
+        req.user = data.user;
+        return next();
+      }
+    }
+
+    // Access token missing or expired: try the refresh token
+    if (refreshToken) {
+      const { data, error } = await supabaseAuth().auth.refreshSession({
+        refresh_token: refreshToken,
+      });
+      if (!error && data?.session && data?.user) {
+        setSessionCookies(res, data.session);
+        // routes read the token from req.cookies, so keep it current
+        req.cookies[ACCESS_COOKIE] = data.session.access_token;
+        req.user = data.user;
+        return next();
+      }
+    }
+
+    clearSessionCookies(res);
+    return res.redirect("/login");
+  } catch (err) {
+    console.error("[requireAuth] error:", err);
+    return res.redirect("/login");
+  }
 }
 
 /* ------------------------------
@@ -113,7 +159,9 @@ app.get("/login", (req, res) => res.render("login"));
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  const { data, error } = await supabase.auth.signInWithPassword({
+  // Sign in on a throwaway anon client: signing in on the shared
+  // service-role client would replace its credentials with this user's.
+  const { data, error } = await supabaseAuth().auth.signInWithPassword({
     email,
     password,
   });
@@ -122,11 +170,14 @@ app.post("/login", async (req, res) => {
     return res.render("login", { error: error.message });
   }
 
-  res.cookie("supabase-auth-token", data.session.access_token, {
-    httpOnly: true,
-  });
+  setSessionCookies(res, data.session);
 
   res.redirect("/home");
+});
+
+app.post("/logout", (req, res) => {
+  clearSessionCookies(res);
+  res.redirect("/login");
 });
 
 /* ------------------------------
@@ -286,16 +337,17 @@ app.get("/search-students", requireAuth, async (req, res) => {
         classes!inner (id, name, order_index)
       )`
     )
-    .or(`name.ilike.%${q}%`)
     .is("deleted_at", null)
     .order("id", { ascending: false });
 
+  // Match on student name or class name. Filtering here (not in the
+  // query string) keeps user input out of the PostgREST filter syntax.
   if (!error && q) {
     students = students.filter(
       (s) =>
-        s.name.toLowerCase().includes(q) ||
-        s.student_classes.some((sc) =>
-          sc.classes.name.toLowerCase().includes(q)
+        (s.name || "").toLowerCase().includes(q) ||
+        (s.student_classes || []).some((sc) =>
+          (sc.classes?.name || "").toLowerCase().includes(q)
         )
     );
   }
@@ -468,10 +520,6 @@ app.post("/update-status/:id", requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-app.listen(port, () =>
-  console.log(`Server running at http://localhost:${port}`)
-);
-
 /* ------------------------------
 GRADING PAGE
 ------------------------------ */
@@ -607,8 +655,8 @@ app.get("/scores/:classId/student/:studentId", requireAuth, async (req, res) => 
 
     const withScores = items.map(item => ({
       ...item,
-      score_id: scoreMap[item.id]?.id || null,
-      score_value: scoreMap[item.id]?.score || null
+      score_id: scoreMap[item.id]?.id ?? null,
+      score_value: scoreMap[item.id]?.score ?? null
     }));
 
     // group by category
@@ -699,7 +747,7 @@ function renderView(app, view, data) {
     });
   });
 }
-app.get("/export-pdf/:studentClassId", async (req, res) => {
+app.get("/export-pdf/:studentClassId", requireAuth, async (req, res) => {
   let browser;
 
   const logoPath = path.join(process.cwd(), "public", "image", "logo.png");
@@ -857,9 +905,18 @@ app.get("/export-pdf/:studentClassId", async (req, res) => {
     // ----------------------------------------
     // 8️⃣ Send PDF
     // ----------------------------------------
+    // Header values must be ASCII: send a safe fallback name plus the
+    // real (UTF-8) name via filename* for browsers that support it.
+    const fullName = `${sc.student?.name || "student"}-report.pdf`;
+    const asciiName = fullName.replace(/[^A-Za-z0-9._ -]/g, "_");
+    const encodedName = encodeURIComponent(fullName).replace(
+      /['()*]/g,
+      (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase()
+    );
+
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=${sc.student.name}-report.pdf`
+      "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`
     });
 
     res.send(pdfBuffer);
@@ -893,4 +950,6 @@ app.post("/students/:id/delete", requireAuth, async (req, res) => {
   res.redirect("/views");
 });
 
-app.use(express.static("public"));
+app.listen(port, () =>
+  console.log(`Server running at http://localhost:${port}`)
+);
