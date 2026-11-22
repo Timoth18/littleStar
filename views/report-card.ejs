@@ -163,18 +163,27 @@
       -webkit-box-decoration-break: clone;
     }
     
+    /* Logo on the left; the title rows are centered in the space beside it */
     .header {
       display: flex;
       align-items: center;
+      gap: 30px;
     }
 
-    /* title and date stack vertically, beside the logo */
-    .header-text {
+    .header-logo {
+      height: 140px;
+      flex-shrink: 0;
+    }
+
+    .header-title {
       flex: 1;
+      text-align: center;
     }
 
-    .header-text h1 {
-      margin-bottom: 4px;
+    /* All three title rows keep the original h1 look */
+    .header-title h1 {
+      margin-top: 0;
+      margin-bottom: 0;
     }
 
     .avoid-break {
@@ -196,18 +205,20 @@
 
 <body>
   <div class="header">
-    <img 
+    <img
     src="data:image/jpeg;base64,<%= logoBase64 %>"
     alt="Logo"
-    style="height: 140px; margin-right: 10px;"
+    class="header-logo"
     />
-    <div class="header-text">
+    <div class="header-title">
 <% if (classInfo.name === 'English') { %>
-      <h1>Bimba LittleStar Student Report</h1>
-      <p>Report Issued: <%= exportDateEN %></p>
+      <h1>Child Development Report</h1>
+      <h1>Bimba Little Star</h1>
+      <h1><%= exportDateEN %></h1>
 <% } else { %>
-      <h1>Laporan Perkembangan Anak Bimba LittleStar</h1>
-      <p><%= exportDateID %></p>
+      <h1>Laporan Perkembangan Anak</h1>
+      <h1>Bimba Little Star</h1>
+      <h1><%= exportDateID %></h1>
 <% } %>
     </div>
   </div>
